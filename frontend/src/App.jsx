@@ -8,6 +8,8 @@ import Recommendations from './pages/Recommendations';
 import Genres from './pages/Genres';
 import Grids from './pages/Grids';
 import Community from './pages/Community';
+import ContentDetails from './pages/ContentDetails';
+import PersonDetails from './pages/PersonDetails';
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
           <Route path="genres" element={<Genres />} />
           <Route path="grids" element={<Grids />} />
           <Route path="community" element={<Community />} />
+          <Route path="details/:source/:id" element={<ContentDetails />} />
+          <Route path="person/:source/:id" element={<PersonDetails />} />
           {/* We will add more routes here later */}
           <Route path="*" element={<div className="p-10 text-center">Page Not Found</div>} />
         </Route>
