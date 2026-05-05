@@ -10,6 +10,7 @@ import Grids from './pages/Grids';
 import Community from './pages/Community';
 import ContentDetails from './pages/ContentDetails';
 import PersonDetails from './pages/PersonDetails';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="community" element={<Community />} />
           <Route path="details/:source/:id" element={<ContentDetails />} />
           <Route path="person/:source/:id" element={<PersonDetails />} />
+          <Route path="profile" element={<Profile />} />
           {/* We will add more routes here later */}
           <Route path="*" element={<div className="p-10 text-center">Page Not Found</div>} />
         </Route>
