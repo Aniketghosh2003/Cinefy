@@ -222,6 +222,95 @@ exports.getRecommendations = async (req, res) => {
   }
 };
 
-exports.getTop = async (req, res) => { /* implementation */ };
-exports.getOngoing = async (req, res) => { /* implementation */ };
-exports.getUpcoming = async (req, res) => { /* implementation */ };
+// Helper to format TMDB arrays
+const formatTmdbArray = (results, type) => {
+  return (results || []).map(item => ({
+    source: "tmdb",
+    externalId: item.id.toString(),
+    type: item.media_type || type, // fallback to passed type
+    title: item.title || item.name,
+    poster: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
+    rating: item.vote_average,
+  }));
+};
+
+// Helper to format Jikan arrays
+const formatJikanArray = (data) => {
+  return (data || []).map(item => ({
+    source: "jikan",
+    externalId: item.mal_id.toString(),
+    type: "anime",
+    title: item.title,
+    poster: item.images?.jpg?.image_url,
+    rating: item.score,
+  }));
+};
+
+exports.getTop = async (req, res) => {
+  try {
+    const { type } = req.query; // 'movie', 'tv', 'anime', or undefined
+    let results = [];
+
+    if (!type || type === "movie") {
+      const resMovie = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${process.env.TMDB_API_KEY}`);
+      results = [...results, ...formatTmdbArray((await resMovie.json()).results, "movie")];
+    }
+    if (!type || type === "tv") {
+      const resTv = await fetch(`https://api.themoviedb.org/3/tv/top_rated?api_key=${process.env.TMDB_API_KEY}`);
+      results = [...results, ...formatTmdbArray((await resTv.json()).results, "tv")];
+    }
+    if (!type || type === "anime") {
+      const resAnime = await fetch(`https://api.jikan.moe/v4/top/anime`);
+      results = [...results, ...formatJikanArray((await resAnime.json()).data)];
+    }
+
+    results.sort((a, b) => b.rating - a.rating);
+    res.status(200).json(results.slice(0, 20));
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+exports.getOngoing = async (req, res) => {
+  try {
+    const { type } = req.query;
+    let results = [];
+
+    if (!type || type === "movie") {
+      const resMovie = await fetch(`https://api.themoviedb.org/3/movie/now_playing?api_key=${process.env.TMDB_API_KEY}`);
+      results = [...results, ...formatTmdbArray((await resMovie.json()).results, "movie")];
+    }
+    if (!type || type === "tv") {
+      const resTv = await fetch(`https://api.themoviedb.org/3/tv/on_the_air?api_key=${process.env.TMDB_API_KEY}`);
+      results = [...results, ...formatTmdbArray((await resTv.json()).results, "tv")];
+    }
+    if (!type || type === "anime") {
+      const resAnime = await fetch(`https://api.jikan.moe/v4/seasons/now`);
+      results = [...results, ...formatJikanArray((await resAnime.json()).data)];
+    }
+
+    res.status(200).json(results.slice(0, 20));
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+exports.getUpcoming = async (req, res) => {
+  try {
+    const { type } = req.query;
+    let results = [];
+
+    if (!type || type === "movie") {
+      const resMovie = await fetch(`https://api.themoviedb.org/3/movie/upcoming?api_key=${process.env.TMDB_API_KEY}`);
+      results = [...results, ...formatTmdbArray((await resMovie.json()).results, "movie")];
+    }
+    if (!type || type === "anime") {
+      const resAnime = await fetch(`https://api.jikan.moe/v4/seasons/upcoming`);
+      results = [...results, ...formatJikanArray((await resAnime.json()).data)];
+    }
+
+    res.status(200).json(results.slice(0, 20));
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};

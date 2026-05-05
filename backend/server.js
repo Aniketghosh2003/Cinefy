@@ -15,6 +15,7 @@ const userRoutes = require("./routes/userRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const gridRoutes = require("./routes/gridRoutes");
 const collectionRoutes = require("./routes/collectionRoutes");
+const personRoutes = require("./routes/personRoutes");
 
 app.use("/api/content", contentRoutes);
 app.use("/api/auth", authRoutes);
@@ -22,6 +23,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/grids", gridRoutes);
 app.use("/api/collections", collectionRoutes);
+app.use("/api/person", personRoutes);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)

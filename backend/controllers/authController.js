@@ -68,3 +68,9 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
+// Logout User 
+//logout will happen from frontend 
+exports.logoutUser = (req, res) => {
+  res.status(200).json({ message: "Logged out successfully. Client should delete the token." });
+};
