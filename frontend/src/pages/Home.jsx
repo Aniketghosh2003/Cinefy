@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Megaphone, Flame, Play, Star, CalendarDays, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -12,7 +13,7 @@ const ContentScroller = ({ title, icon: Icon, data }) => (
     </h2>
     <div className="flex gap-4 overflow-x-auto pb-4 snap-x hide-scrollbar">
       {data.map((item) => (
-        <div key={item.externalId} className="min-w-[160px] w-[160px] snap-start group cursor-pointer flex flex-col">
+        <Link to={`/details/${item.source}/${item.externalId}`} key={item.externalId} className="min-w-[160px] w-[160px] snap-start group flex flex-col">
           <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-2 transition-transform duration-300 group-hover:scale-105 shadow-lg group-hover:neon-border">
             {item.poster ? (
               <img src={item.poster} alt={item.title} className="w-full h-full object-cover" />
@@ -32,7 +33,7 @@ const ContentScroller = ({ title, icon: Icon, data }) => (
             {item.title}
           </h3>
           <p className="text-[10px] text-[var(--color-text-secondary)] capitalize mt-0.5">{item.type}</p>
-        </div>
+        </Link>
       ))}
     </div>
   </section>
@@ -91,7 +92,7 @@ const Home = () => {
         {/* Trending Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
           {data.trending.slice(0, 8).map((item) => (
-            <div key={item.externalId} className="group cursor-pointer flex flex-col">
+            <Link to={`/details/${item.source}/${item.externalId}`} key={item.externalId} className="group flex flex-col">
               <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-2 transition-transform duration-300 group-hover:scale-105 shadow-lg group-hover:neon-border">
                 {item.poster ? (
                   <img src={item.poster} alt={item.title} className="w-full h-full object-cover" />
@@ -106,7 +107,7 @@ const Home = () => {
                 {item.title}
               </h3>
               <p className="text-[10px] text-[var(--color-text-secondary)] capitalize mt-0.5">{item.type}</p>
-            </div>
+            </Link>
           ))}
         </div>
 
@@ -149,7 +150,7 @@ const Home = () => {
           
           <div className="flex flex-col gap-3">
             {data.trending.slice(0, 5).map((item, index) => (
-              <div key={item.externalId} className="flex items-center gap-4 p-3 rounded-xl glass-panel-hover transition-colors cursor-pointer border border-transparent hover:border-white/10 group">
+              <Link to={`/details/${item.source}/${item.externalId}`} key={item.externalId} className="flex items-center gap-4 p-3 rounded-xl glass-panel-hover transition-colors border border-transparent hover:border-white/10 group">
                 <div className="text-5xl font-black italic text-white/10 group-hover:text-[var(--color-text-secondary)] transition-colors w-8 text-center -ml-2">
                   {index + 1}
                 </div>
@@ -164,7 +165,7 @@ const Home = () => {
                     {item.popularity ? `${(item.popularity / 1000).toFixed(1)}K Interested` : 'Trending'}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

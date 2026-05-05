@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, Play } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -59,7 +60,7 @@ const Ongoing = () => {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
           {data.map((item) => (
-            <div key={item.externalId} className="group cursor-pointer flex flex-col">
+            <Link to={`/details/${item.source}/${item.externalId}`} key={item.externalId} className="group flex flex-col">
               <div className="relative rounded-xl overflow-hidden aspect-[2/3] mb-3 transition-transform duration-300 group-hover:scale-105 shadow-lg group-hover:neon-border">
                 {item.poster ? (
                   <img src={item.poster} alt={item.title} className="w-full h-full object-cover" />
@@ -77,7 +78,7 @@ const Ongoing = () => {
                 <span>{item.type}</span>
                 {item.rating && <span className="text-yellow-400 font-bold">★ {item.rating.toFixed(1)}</span>}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       )}
