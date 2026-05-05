@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --color-void: #0a0a0f;
+  --color-surface: #1a1a24;
+  --color-surface-light: #252533;
+  --color-neon-pink: #ff2a5f;
+  --color-electric-cyan: #00e5ff;
+  --color-anime-purple: #8a2be2;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a0a0b0;
+  
+  --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-void);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    /* Prevent light mode flash entirely */
+    color-scheme: dark; 
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(26, 26, 36, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .glass-panel-hover:hover {
+    background: rgba(37, 37, 51, 0.8);
+    border-color: rgba(0, 229, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+  }
+  
+  .text-gradient {
+    background: linear-gradient(to right, var(--color-neon-pink), var(--color-anime-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .neon-border {
+    border: 1px solid var(--color-electric-cyan);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+  }
+}
