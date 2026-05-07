@@ -1,50 +1,89 @@
 @import "tailwindcss";
 
 @theme {
-  --color-void: #0a0a0f;
-  --color-surface: #1a1a24;
-  --color-surface-light: #252533;
-  --color-neon-pink: #ff2a5f;
-  --color-electric-cyan: #00e5ff;
-  --color-anime-purple: #8a2be2;
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #a0a0b0;
-  
+
+  /* Backgrounds */
+  --color-background: #0f1115;
+  --color-surface: #171a21;
+  --color-surface-light: #1f2430;
+
+  /* Accents */
+  --color-accent: #d4a574;
+  --color-accent-hover: #e6b98a;
+
+  /* Secondary Accent */
+  --color-crimson: #b3404a;
+
+  /* Text */
+  --color-text-primary: #f5f5f7;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+
+  /* Borders */
+  --color-border: rgba(255,255,255,0.08);
+
   --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
 }
 
 @layer base {
+
   body {
-    background-color: var(--color-void);
+    background-color: var(--color-background);
     color: var(--color-text-primary);
     font-family: var(--font-sans);
-    /* Prevent light mode flash entirely */
-    color-scheme: dark; 
+    color-scheme: dark;
   }
 }
 
 @layer utilities {
+
   .glass-panel {
-    background: rgba(26, 26, 36, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(23, 26, 33, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+
+    border: 1px solid var(--color-border);
+
+    box-shadow:
+      0 4px 30px rgba(0,0,0,0.25);
   }
-  
+
   .glass-panel-hover:hover {
-    background: rgba(37, 37, 51, 0.8);
-    border-color: rgba(0, 229, 255, 0.3);
-    box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+
+    background: rgba(31, 36, 48, 0.9);
+
+    border-color: rgba(212,165,116,0.25);
+
+    transition: all 0.25s ease;
   }
-  
+
   .text-gradient {
-    background: linear-gradient(to right, var(--color-neon-pink), var(--color-anime-purple));
+
+    background: linear-gradient(
+      to right,
+      #f5f5f7,
+      #d4a574
+    );
+
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-  
-  .neon-border {
-    border: 1px solid var(--color-electric-cyan);
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+
+  .premium-border {
+
+    border: 1px solid rgba(212,165,116,0.25);
+
+    box-shadow:
+      0 0 0 1px rgba(212,165,116,0.05);
+  }
+
+  .premium-hover:hover {
+
+    box-shadow:
+      0 10px 30px rgba(0,0,0,0.35);
+
+    transform: translateY(-2px);
+
+    transition: all 0.25s ease;
   }
 }

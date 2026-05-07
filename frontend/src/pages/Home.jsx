@@ -53,11 +53,20 @@ const Home = () => {
           fetch(`${API_URL}/content/upcoming`)
         ]);
         
+        const safeJson = async (res) => {
+          try {
+            const data = await res.json();
+            return Array.isArray(data) ? data : [];
+          } catch (e) {
+            return [];
+          }
+        };
+
         setData({
-          trending: await trendRes.json(),
-          top: await topRes.json(),
-          ongoing: await ongoingRes.json(),
-          upcoming: await upcomingRes.json()
+          trending: await safeJson(trendRes),
+          top: await safeJson(topRes),
+          ongoing: await safeJson(ongoingRes),
+          upcoming: await safeJson(upcomingRes)
         });
         setLoading(false);
       } catch (error) {

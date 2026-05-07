@@ -19,9 +19,16 @@ const Ongoing = () => {
           
         const res = await fetch(url);
         const json = await res.json();
-        setData(json);
+        
+        if (Array.isArray(json)) {
+          setData(json);
+        } else {
+          console.error("Ongoing API Error:", json);
+          setData([]);
+        }
       } catch (error) {
         console.error("Error fetching ongoing:", error);
+        setData([]);
       } finally {
         setLoading(false);
       }

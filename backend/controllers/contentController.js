@@ -246,22 +246,30 @@ const formatJikanArray = (data) => {
   }));
 };
 
+const safeFetchAndFormat = async (url, formatFn, typeArg) => {
+  try {
+    const response = await fetch(url);
+    const json = await response.json();
+    return formatFn(json.results || json.data || [], typeArg);
+  } catch (e) {
+    console.error("Fetch failed for", url, e.message);
+    return [];
+  }
+};
+
 exports.getTop = async (req, res) => {
   try {
-    const { type } = req.query; // 'movie', 'tv', 'anime', or undefined
+    const { type } = req.query;
     let results = [];
 
     if (!type || type === "movie") {
-      const resMovie = await fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${process.env.TMDB_API_KEY}`);
-      results = [...results, ...formatTmdbArray((await resMovie.json()).results, "movie")];
+      results = [...results, ...(await safeFetchAndFormat(`https://api.themoviedb.org/3/movie/top_rated?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
     }
     if (!type || type === "tv") {
-      const resTv = await fetch(`https://api.themoviedb.org/3/tv/top_rated?api_key=${process.env.TMDB_API_KEY}`);
-      results = [...results, ...formatTmdbArray((await resTv.json()).results, "tv")];
+      results = [...results, ...(await safeFetchAndFormat(`https://api.themoviedb.org/3/tv/top_rated?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "tv"))];
     }
     if (!type || type === "anime") {
-      const resAnime = await fetch(`https://api.jikan.moe/v4/top/anime`);
-      results = [...results, ...formatJikanArray((await resAnime.json()).data)];
+      results = [...results, ...(await safeFetchAndFormat(`https://api.jikan.moe/v4/top/anime`, formatJikanArray))];
     }
 
     results.sort((a, b) => b.rating - a.rating);
@@ -277,16 +285,13 @@ exports.getOngoing = async (req, res) => {
     let results = [];
 
     if (!type || type === "movie") {
-      const resMovie = await fetch(`https://api.themoviedb.org/3/movie/now_playing?api_key=${process.env.TMDB_API_KEY}`);
-      results = [...results, ...formatTmdbArray((await resMovie.json()).results, "movie")];
+      results = [...results, ...(await safeFetchAndFormat(`https://api.themoviedb.org/3/movie/now_playing?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
     }
     if (!type || type === "tv") {
-      const resTv = await fetch(`https://api.themoviedb.org/3/tv/on_the_air?api_key=${process.env.TMDB_API_KEY}`);
-      results = [...results, ...formatTmdbArray((await resTv.json()).results, "tv")];
+      results = [...results, ...(await safeFetchAndFormat(`https://api.themoviedb.org/3/tv/on_the_air?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "tv"))];
     }
     if (!type || type === "anime") {
-      const resAnime = await fetch(`https://api.jikan.moe/v4/seasons/now`);
-      results = [...results, ...formatJikanArray((await resAnime.json()).data)];
+      results = [...results, ...(await safeFetchAndFormat(`https://api.jikan.moe/v4/seasons/now`, formatJikanArray))];
     }
 
     res.status(200).json(results.slice(0, 20));
@@ -301,12 +306,10 @@ exports.getUpcoming = async (req, res) => {
     let results = [];
 
     if (!type || type === "movie") {
-      const resMovie = await fetch(`https://api.themoviedb.org/3/movie/upcoming?api_key=${process.env.TMDB_API_KEY}`);
-      results = [...results, ...formatTmdbArray((await resMovie.json()).results, "movie")];
+      results = [...results, ...(await safeFetchAndFormat(`https://api.themoviedb.org/3/movie/upcoming?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
     }
     if (!type || type === "anime") {
-      const resAnime = await fetch(`https://api.jikan.moe/v4/seasons/upcoming`);
-      results = [...results, ...formatJikanArray((await resAnime.json()).data)];
+      results = [...results, ...(await safeFetchAndFormat(`https://api.jikan.moe/v4/seasons/upcoming`, formatJikanArray))];
     }
 
     res.status(200).json(results.slice(0, 20));
