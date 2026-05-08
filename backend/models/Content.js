@@ -54,6 +54,6 @@ const ContentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 ContentSchema.index({ source: 1, externalId: 1 }, { unique: true });
-ContentSchema.index({ title: "text" });
+ContentSchema.index({ title: "text" }, { language_override: "text_language" });
 
 module.exports = mongoose.model("Content", ContentSchema);

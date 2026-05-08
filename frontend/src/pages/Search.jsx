@@ -29,9 +29,10 @@ const Search = () => {
         setLoading(true);
         const res = await fetch(`${API_URL}/content/search?q=${encodeURIComponent(debouncedQuery)}`);
         const json = await res.json();
-        setResults(json);
+        setResults(Array.isArray(json) ? json : json?.results || []);
       } catch (error) {
         console.error("Search Error:", error);
+        setResults([]);
       } finally {
         setLoading(false);
       }
