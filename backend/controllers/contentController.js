@@ -14,25 +14,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Wrapper for fetch with timeout and better error handling
 const fetchWithTimeout = async (url, options = {}, timeout = 10000, retries = 3) => {
-  console.log(`[FETCH START] ${options.method || 'GET'} ${url}`);
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.log(`[FETCH TIMEOUT] Request aborted after ${timeout}ms`);
       controller.abort();
     }, timeout);
     
-    console.log(`[FETCH SIGNAL] Preparing fetch with signal...`);
     const response = await fetch(url, {
       ...options,
       signal: controller.signal
     });
     
     clearTimeout(timeoutId);
-    console.log(`[FETCH SUCCESS] Response Status: ${response.status}`);
     
     if (response.status === 429 && retries > 0) {
-      console.log(`[FETCH RATE LIMITED] Retrying ${url} in 1.5s... (${retries} retries left)`);
       await sleep(1500);
       return fetchWithTimeout(url, options, timeout, retries - 1);
     }
@@ -40,12 +35,12 @@ const fetchWithTimeout = async (url, options = {}, timeout = 10000, retries = 3)
     return response;
   } catch (error) {
     if (retries > 0) {
-      console.log(`[FETCH FAILED] Retrying ${url} in 1.5s... (${retries} retries left)`);
       await sleep(1500);
       return fetchWithTimeout(url, options, timeout, retries - 1);
     }
-    console.error(`[FETCH FAILED] ${url} - Error:`, error.name, error.message);
-    throw new Error(`Fetch failed for ${url}: ${error.message}`);
+    const safeUrl = url.split('?')[0];
+    console.error(`[FETCH FAILED] ${safeUrl} - Error:`, error.name, error.message);
+    throw new Error(`Fetch failed for ${safeUrl}: ${error.message}`);
   }
 };
 
@@ -86,7 +81,6 @@ const generateMoodWithGrok = async (title, description) => {
 exports.getTrending = async (req, res) => {
   try {
     if (!process.env.TMDB_API_KEY) {
-      console.log("[TRENDING] TMDB_API_KEY not configured, using mock data");
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
 
@@ -113,13 +107,12 @@ exports.getTrending = async (req, res) => {
       }
     } catch (err) {
       console.error("TMDB Trending Error:", err.message);
-      console.log("[TRENDING] TMDB failed, trying Jikan...");
     }
 
     // 2. Fetch Jikan Trending
     let formattedJikan = [];
     try {
-      const jikanRes = await fetchWithTimeout(`https://api.jikan.moe/v4/top/anime`);
+      const jikanRes = await fetchWithTimeout(`https://api.jikan.moe/v4/seasons/now`);
       
       if (jikanRes.ok) {
         const jikanData = await jikanRes.json();
@@ -138,13 +131,10 @@ exports.getTrending = async (req, res) => {
       console.error("Jikan Trending Error:", err.message);
     }
 
-    // Merge and sort
-    const combined = [...formattedTmdb, ...formattedJikan]
-      .sort((a, b) => b.popularity - a.popularity)
-      .slice(0, 20);
+    // Merge and slice top 5 from each
+    const combined = [...formattedTmdb.slice(0, 5), ...formattedJikan.slice(0, 5)];
 
     if (combined.length === 0) {
-      console.log("[TRENDING] Both APIs failed, returning mock data");
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
 
@@ -405,27 +395,45 @@ exports.getTop = async (req, res) => {
     }
 
     const { type } = req.query;
-    let results = [];
+    let movieTvResults = [];
+    let animeResults = [];
+    const limit = type ? 20 : 5;
 
     if (!type || type === "movie") {
-      results = [...results, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/movie/top_rated?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
+      movieTvResults = [...movieTvResults, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/movie/top_rated?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
     }
     if (!type || type === "tv") {
-      results = [...results, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/tv/top_rated?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "tv"))];
+      movieTvResults = [...movieTvResults, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/tv/top_rated?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "tv"))];
     }
     if (!type || type === "anime") {
-      results = [...results, ...(await safeFetchAndFormat(`https://api.jikan.moe/v4/top/anime`, formatJikanArray))];
+      animeResults = await safeFetchAndFormat(`https://api.jikan.moe/v4/top/anime`, formatJikanArray);
     }
 
-    if (results.length === 0) {
+    movieTvResults.sort((a, b) => b.rating - a.rating);
+    const combined = [...movieTvResults.slice(0, limit), ...animeResults.slice(0, limit)];
+
+    if (combined.length === 0) {
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
 
-    results.sort((a, b) => b.rating - a.rating);
-    res.status(200).json(results.slice(0, 20));
+    res.status(200).json(combined);
   } catch (error) {
     console.error("Get Top Error:", error.message);
     res.status(200).json(MOCK_TRENDING_DATA);
+  }
+};
+
+const getTodaysAnime = async () => {
+  try {
+    const response = await fetchWithTimeout(`https://api.jikan.moe/v4/seasons/now`);
+    if (!response.ok) return [];
+    const json = await response.json();
+    const days = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
+    const today = days[new Date().getDay()];
+    const todaysAnime = (json.data || []).filter(anime => anime.broadcast?.day === today);
+    return formatJikanArray(todaysAnime);
+  } catch (e) {
+    return [];
   }
 };
 
@@ -436,23 +444,30 @@ exports.getOngoing = async (req, res) => {
     }
 
     const { type } = req.query;
-    let results = [];
+    let movieTvResults = [];
+    let animeResults = [];
+    const limit = type ? 20 : 5;
 
     if (!type || type === "movie") {
-      results = [...results, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/movie/now_playing?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
+      movieTvResults = [...movieTvResults, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/movie/now_playing?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
     }
     if (!type || type === "tv") {
-      results = [...results, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/tv/on_the_air?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "tv"))];
+      movieTvResults = [...movieTvResults, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/tv/on_the_air?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "tv"))];
     }
     if (!type || type === "anime") {
-      results = [...results, ...(await safeFetchAndFormat(`https://api.jikan.moe/v4/seasons/now`, formatJikanArray))];
+      animeResults = await getTodaysAnime();
+      if (animeResults.length === 0) {
+        animeResults = await safeFetchAndFormat(`https://api.jikan.moe/v4/seasons/now`, formatJikanArray);
+      }
     }
 
-    if (results.length === 0) {
+    const combined = [...movieTvResults.slice(0, limit), ...animeResults.slice(0, limit)];
+
+    if (combined.length === 0) {
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
 
-    res.status(200).json(results.slice(0, 20));
+    res.status(200).json(combined);
   } catch (error) {
     console.error("Get Ongoing Error:", error.message);
     res.status(200).json(MOCK_TRENDING_DATA);
@@ -462,16 +477,18 @@ exports.getOngoing = async (req, res) => {
 exports.getUpcoming = async (req, res) => {
   try {
     const { type } = req.query;
-    let results = [];
+    let movieTvResults = [];
+    let animeResults = [];
+    const limit = type ? 20 : 5;
 
     if (!type || type === "movie") {
-      results = [...results, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/movie/upcoming?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
+      movieTvResults = [...movieTvResults, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/movie/upcoming?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
     }
     if (!type || type === "anime") {
-      results = [...results, ...(await safeFetchAndFormat(`https://api.jikan.moe/v4/seasons/upcoming`, formatJikanArray))];
+      animeResults = await safeFetchAndFormat(`https://api.jikan.moe/v4/seasons/upcoming`, formatJikanArray);
     }
 
-    res.status(200).json(results.slice(0, 20));
+    res.status(200).json([...movieTvResults.slice(0, limit), ...animeResults.slice(0, limit)]);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
