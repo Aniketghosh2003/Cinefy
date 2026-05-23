@@ -303,7 +303,7 @@ exports.getContentDetails = async (req, res) => {
     content = await Content.findOneAndUpdate(
       { source, externalId },
       { $set: newContentData },
-      { new: true, upsert: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     res.status(200).json(content);

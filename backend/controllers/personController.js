@@ -127,7 +127,7 @@ exports.getPersonDetails = async (req, res) => {
     person = await Person.findOneAndUpdate(
       { source, externalId },
       { $set: newPersonData },
-      { new: true, upsert: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // Note: We don't instantly populate `knownFor` from externalIds here to save complex DB inserts of Content objects.

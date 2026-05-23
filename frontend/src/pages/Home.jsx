@@ -39,23 +39,56 @@ const ContentGridSection = ({ title, icon: Icon, data, limit = 10 }) => (
   </section>
 );
 
+const HomeLoader = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-xl">
+    <div className="flex flex-col items-center gap-5 rounded-3xl border border-white/10 bg-[rgba(15,17,21,0.72)] px-8 py-10 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
+      <div className="relative flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,rgba(0,229,255,0.35),rgba(212,165,116,0.28))] blur-2xl animate-pulse" />
+        <div className="relative w-20 h-20 rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
+          <div className="absolute inset-1 rounded-full border-4 border-transparent border-t-[var(--color-electric-cyan)] border-r-[var(--color-accent)] animate-spin" />
+          <div className="absolute inset-3 rounded-full border-2 border-dashed border-white/20 animate-[spin_6s_linear_infinite_reverse]" />
+          <div className="w-3 h-3 rounded-full bg-[var(--color-electric-cyan)] shadow-[0_0_18px_rgba(0,229,255,0.9)]" />
+        </div>
+      </div>
+      <div className="text-center">
+        <p className="text-xs uppercase tracking-[0.35em] text-[var(--color-text-secondary)]">Loading Cinefy</p>
+        <h2 className="mt-2 text-2xl font-black text-white">Fetching the latest titles</h2>
+        <p className="mt-2 max-w-md text-sm text-[var(--color-text-secondary)]">
+          We&apos;re loading trending, top rated, ongoing, and upcoming content.
+        </p>
+        <div className="mt-5 flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[var(--color-electric-cyan)] animate-bounce [animation-delay:-0.2s]" />
+          <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-bounce [animation-delay:-0.1s]" />
+          <span className="w-2 h-2 rounded-full bg-white animate-bounce" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const Home = () => {
   const [data, setData] = useState({ trending: [], top: [], ongoing: [], upcoming: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+
       try {
-        const [trendRes, topRes, ongoingRes, upcomingRes] = await Promise.all([
+        const [trendRes, topRes, ongoingRes, upcomingRes] = await Promise.allSettled([
           fetch(`${API_URL}/content/trending`),
           fetch(`${API_URL}/content/top`),
           fetch(`${API_URL}/content/ongoing`),
           fetch(`${API_URL}/content/upcoming`)
         ]);
         
-        const safeJson = async (res) => {
+        const safeJson = async (result) => {
           try {
-            const data = await res.json();
+            if (result.status !== 'fulfilled' || !result.value.ok) {
+              return [];
+            }
+
+            const data = await result.value.json();
             return Array.isArray(data) ? data : [];
           } catch (e) {
             return [];
@@ -68,9 +101,9 @@ const Home = () => {
           ongoing: await safeJson(ongoingRes),
           upcoming: await safeJson(upcomingRes)
         });
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
         setLoading(false);
       }
     };
@@ -78,14 +111,7 @@ const Home = () => {
   }, []);
 
   if (loading) {
-    return <div className="animate-pulse flex gap-8">
-      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[...Array(8)].map((_, i) => <div key={i} className="h-64 bg-white/5 rounded-xl"></div>)}
-      </div>
-      <div className="w-80 hidden lg:block space-y-4">
-        {[...Array(5)].map((_, i) => <div key={i} className="h-24 bg-white/5 rounded-xl"></div>)}
-      </div>
-    </div>;
+    return <HomeLoader />;
   }
 
   return (
