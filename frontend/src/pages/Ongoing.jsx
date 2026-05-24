@@ -4,6 +4,33 @@ import { Link } from 'react-router-dom';
 
 const API_URL = 'http://localhost:5000/api';
 
+const OngoingLoader = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-xl">
+    <div className="flex flex-col items-center gap-5 rounded-3xl border border-white/10 bg-[rgba(15,17,21,0.72)] px-8 py-10 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
+      <div className="relative flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,rgba(0,229,255,0.35),rgba(212,165,116,0.28))] blur-2xl animate-pulse" />
+        <div className="relative w-20 h-20 rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
+          <div className="absolute inset-1 rounded-full border-4 border-transparent border-t-cyan-400 border-r-amber-400 animate-spin" />
+          <div className="absolute inset-3 rounded-full border-2 border-dashed border-white/20 animate-[spin_6s_linear_infinite_reverse]" />
+          <div className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_18px_rgba(0,229,255,0.9)]" />
+        </div>
+      </div>
+      <div className="text-center">
+        <p className="text-xs uppercase tracking-[0.35em] text-gray-300">Loading Cinefy</p>
+        <h2 className="mt-2 text-2xl font-black text-white">Fetching today's releases</h2>
+        <p className="mt-2 max-w-md text-sm text-gray-300">
+          We&apos;re pulling every title releasing today across all categories.
+        </p>
+        <div className="mt-5 flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce [animation-delay:-0.2s]" />
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:-0.1s]" />
+          <span className="w-2 h-2 rounded-full bg-white animate-bounce" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const Ongoing = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +68,7 @@ const Ongoing = () => {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-black text-white flex items-center gap-3">
           <Calendar className="w-8 h-8 text-[var(--color-neon-pink)]" />
-          Releasing Today
+          Today&apos;s Menu
         </h1>
 
         {/* Filters */}
@@ -61,9 +88,7 @@ const Ongoing = () => {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 animate-pulse">
-          {[...Array(12)].map((_, i) => <div key={i} className="aspect-[2/3] bg-white/5 rounded-xl"></div>)}
-        </div>
+        <OngoingLoader />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
           {data.map((item) => (
@@ -92,7 +117,7 @@ const Ongoing = () => {
       
       {!loading && data.length === 0 && (
         <div className="text-center py-20 text-gray-500">
-          No content found releasing today for this category.
+          No content found for today&apos;s category.
         </div>
       )}
     </div>

@@ -446,7 +446,7 @@ exports.getOngoing = async (req, res) => {
     const { type } = req.query;
     let movieTvResults = [];
     let animeResults = [];
-    const limit = type ? 20 : 5;
+    const limit = 20;
 
     if (!type || type === "movie") {
       movieTvResults = [...movieTvResults, ...(await safeFetchAndFormat(`https://api.tmdb.org/3/movie/now_playing?api_key=${process.env.TMDB_API_KEY}`, formatTmdbArray, "movie"))];
@@ -461,7 +461,9 @@ exports.getOngoing = async (req, res) => {
       }
     }
 
-    const combined = [...movieTvResults.slice(0, limit), ...animeResults.slice(0, limit)];
+    const combined = type
+      ? [...movieTvResults.slice(0, limit), ...animeResults.slice(0, limit)]
+      : [...movieTvResults, ...animeResults];
 
     if (combined.length === 0) {
       return res.status(200).json(MOCK_TRENDING_DATA);
