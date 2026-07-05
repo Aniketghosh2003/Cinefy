@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useParams, Link } from 'react-router-dom';
-import { Play, CheckCircle, Bookmark, Plus, Star, Tv, MessageSquare } from 'lucide-react';
+import { Play, CheckCircle, Bookmark, Plus, Star, Tv, MessageSquare, X, Pause } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
+
+const getYoutubeId = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
 
 const ContentDetails = () => {
   const { source, id } = useParams();
@@ -11,6 +18,22 @@ const ContentDetails = () => {
   const [content, setContent] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showTrailerModal, setShowTrailerModal] = useState(false);
+  const [isPlayingBackground, setIsPlayingBackground] = useState(true);
+  const [player, setPlayer] = useState(null);
+  const [isModalVideoPlaying, setIsModalVideoPlaying] = useState(true);
+
+  const videoId = content ? getYoutubeId(content.trailer) : null;
+
+  // Dynamic loading of YouTube IFrame API script
+  useEffect(() => {
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchDetailsAndReviews = async () => {
@@ -42,20 +65,68 @@ const ContentDetails = () => {
     fetchDetailsAndReviews();
   }, [source, id, contentType]);
 
+  useEffect(() => {
+    let newPlayer = null;
+    if (showTrailerModal && videoId) {
+      const initPlayer = () => {
+        newPlayer = new window.YT.Player('modal-player', {
+          videoId: videoId,
+          playerVars: {
+            autoplay: 1,
+            controls: 1,
+            rel: 0,
+            modestbranding: 1,
+          },
+          events: {
+            onStateChange: (event) => {
+              // 1 = playing, 2 = paused, 0 = ended
+              if (event.data === 1) {
+                setIsModalVideoPlaying(true);
+              } else if (event.data === 2 || event.data === 0) {
+                setIsModalVideoPlaying(false);
+              }
+            }
+          }
+        });
+        setPlayer(newPlayer);
+      };
+
+      if (window.YT && window.YT.Player) {
+        initPlayer();
+      } else {
+        window.onYouTubeIframeAPIReady = () => {
+          initPlayer();
+        };
+      }
+    }
+
+    return () => {
+      if (newPlayer && newPlayer.destroy) {
+        newPlayer.destroy();
+      }
+      setPlayer(null);
+      setIsModalVideoPlaying(true);
+    };
+  }, [showTrailerModal, videoId]);
+
   if (loading) {
     return <div className="p-20 text-center animate-pulse text-white">Loading incredible content...</div>;
   }
 
   if (!content) return <div className="p-20 text-center text-white">Content not found.</div>;
 
+  const embedUrl = videoId 
+    ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&rel=0`
+    : content.trailer;
+
   return (
     <div className="pb-20 max-w-7xl mx-auto">
       {/* 1. TOP SECTION: Trailer & Poster */}
       <div className="relative w-full h-[500px] md:h-[600px] rounded-3xl overflow-hidden mb-10 glass-panel neon-border">
-        {content.trailer ? (
+        {content.trailer && isPlayingBackground ? (
           <iframe 
-            src={content.trailer.replace("watch?v=", "embed/") + "?autoplay=1&mute=1&loop=1&playlist=" + content.trailer.split("v=")[1]} 
-            className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none"
+            src={embedUrl} 
+            className="absolute inset-0 w-full h-full object-cover opacity-40 z-0 pointer-events-none"
             frameBorder="0"
             allow="autoplay; encrypted-media"
             allowFullScreen
@@ -66,16 +137,26 @@ const ContentDetails = () => {
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-void)] to-[var(--color-anime-purple)]/20" />
         )}
         
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-void)] via-[var(--color-void)]/60 to-transparent z-10" />
+        {content.trailer && (
+          <button 
+            onClick={() => setIsPlayingBackground(!isPlayingBackground)}
+            className="absolute top-6 right-6 z-30 p-3 rounded-full bg-black/60 hover:bg-white hover:text-black text-white transition-all pointer-events-auto border border-white/10 flex items-center justify-center shadow-lg"
+            title={isPlayingBackground ? "Pause Background Preview" : "Play Background Preview"}
+          >
+            {isPlayingBackground ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
+          </button>
+        )}
         
-        <div className="absolute bottom-0 left-0 w-full p-8 md:p-12 z-20 flex flex-col md:flex-row gap-8 items-end">
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-void)] via-[var(--color-void)]/60 to-transparent z-10 pointer-events-none" />
+        
+        <div className="absolute bottom-0 left-0 w-full p-8 md:p-12 z-20 flex flex-col md:flex-row gap-8 items-end pointer-events-none">
           {/* Poster */}
-          <div className="w-40 md:w-56 flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 hidden sm:block">
+          <div className="w-28 md:w-36 flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 hidden sm:block pointer-events-auto">
             {content.poster ? <img src={content.poster} alt={content.title} className="w-full h-auto" /> : <div className="w-full aspect-[2/3] bg-gray-800"></div>}
           </div>
           
           {/* Title & Basic Info */}
-          <div className="flex-1">
+          <div className="flex-1 pointer-events-auto">
             <h1 className="text-4xl md:text-6xl font-black mb-4 text-white drop-shadow-lg">{content.title}</h1>
             <div className="flex flex-wrap items-center gap-4 text-sm font-semibold text-gray-300 mb-6">
               {content.releaseDate && <span className="bg-white/10 px-3 py-1 rounded-full">{new Date(content.releaseDate).getFullYear()}</span>}
@@ -94,9 +175,17 @@ const ContentDetails = () => {
         <div className="flex-1">
           {/* Action Buttons (Mobile visible, but mainly for Layout flow) */}
           <div className="flex flex-wrap gap-4 mb-10 lg:hidden">
-             <button className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-electric-cyan)] hover:text-black font-bold transition-colors flex items-center justify-center gap-2"><CheckCircle className="w-5 h-5"/> Watched</button>
-             <button className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2"><Bookmark className="w-5 h-5"/> Watch Later</button>
-             <button className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-anime-purple)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2"><Plus className="w-5 h-5"/> Collection</button>
+             {content.trailer && (
+               <button 
+                 onClick={() => setShowTrailerModal(true)} 
+                 className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2 border border-[var(--color-neon-pink)]/30 text-white"
+               >
+                 <Play className="w-5 h-5 fill-current"/> Watch Trailer
+               </button>
+             )}
+             <button className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-electric-cyan)] hover:text-black font-bold transition-colors flex items-center justify-center gap-2 text-white"><CheckCircle className="w-5 h-5"/> Watched</button>
+             <button className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2 text-white"><Bookmark className="w-5 h-5"/> Watch Later</button>
+             <button className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-anime-purple)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2 text-white"><Plus className="w-5 h-5"/> Collection</button>
           </div>
 
           <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><span className="w-1.5 h-6 bg-[var(--color-electric-cyan)] rounded-full"></span>Synopsis</h3>
@@ -182,6 +271,14 @@ const ContentDetails = () => {
           
           {/* Action Buttons (Desktop) */}
           <div className="hidden lg:flex flex-col gap-3 sticky top-24">
+             {content.trailer && (
+               <button 
+                 onClick={() => setShowTrailerModal(true)} 
+                 className="w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-black transition-colors flex items-center justify-center gap-3 text-lg border border-[var(--color-neon-pink)]/30 text-white"
+               >
+                 <Play className="w-6 h-6 fill-current"/> Watch Trailer
+               </button>
+             )}
              <button className="w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-electric-cyan)] hover:text-black font-black transition-colors flex items-center justify-center gap-3 text-lg"><CheckCircle className="w-6 h-6"/> Mark as Watched</button>
              <button className="w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-black transition-colors flex items-center justify-center gap-3 text-lg"><Bookmark className="w-6 h-6"/> Watch Later</button>
              <button className="w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-anime-purple)] hover:text-white font-black transition-colors flex items-center justify-center gap-3 text-lg"><Plus className="w-6 h-6"/> Add to Collection</button>
@@ -199,6 +296,29 @@ const ContentDetails = () => {
         </div>
 
       </div>
+
+      {/* Trailer Modal Overlay */}
+      {showTrailerModal && videoId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+          <div className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black">
+            {/* Close Button */}
+            <button 
+              onClick={() => setShowTrailerModal(false)}
+              className="absolute top-4 right-4 z-10 p-2.5 rounded-full bg-black/60 text-white hover:bg-white hover:text-black transition-all shadow-lg border border-white/10"
+              aria-label="Close trailer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <iframe 
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&rel=0&modestbranding=1`} 
+              className="w-full h-full"
+              frameBorder="0"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
