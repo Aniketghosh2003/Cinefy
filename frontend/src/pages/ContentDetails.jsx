@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useLocation, useParams, Link } from 'react-router-dom';
 import { Play, CheckCircle, Bookmark, Plus, Star, Tv, MessageSquare } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
 
 const ContentDetails = () => {
   const { source, id } = useParams();
+  const location = useLocation();
+  const contentType = new URLSearchParams(location.search).get('type');
   const [content, setContent] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +17,11 @@ const ContentDetails = () => {
       try {
         setLoading(true);
         // 1. Fetch content details (this triggers the backend Lazy Caching + Grok AI)
-        const contentRes = await fetch(`${API_URL}/content/details/${source}/${id}`);
+        const detailUrl = contentType
+          ? `${API_URL}/content/details/${source}/${id}?type=${encodeURIComponent(contentType)}`
+          : `${API_URL}/content/details/${source}/${id}`;
+
+        const contentRes = await fetch(detailUrl);
         const contentData = await contentRes.json();
         setContent(contentData);
 
@@ -34,7 +40,7 @@ const ContentDetails = () => {
       }
     };
     fetchDetailsAndReviews();
-  }, [source, id]);
+  }, [source, id, contentType]);
 
   if (loading) {
     return <div className="p-20 text-center animate-pulse text-white">Loading incredible content...</div>;

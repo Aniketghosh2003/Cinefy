@@ -211,12 +211,17 @@ exports.getContentDetails = async (req, res) => {
   try {
     // 1. Check local DB cache
     let content = await Content.findOne({ source, externalId });
+    let resolvedType = req.query.type;
 
     // If exists and was fetched less than 7 days ago, return it
     if (content) {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       if (content.lastFetched > sevenDaysAgo) {
         return res.status(200).json(content);
+      }
+
+      if (!resolvedType && content.type) {
+        resolvedType = content.type;
       }
     }
 
@@ -228,39 +233,53 @@ exports.getContentDetails = async (req, res) => {
         return res.status(500).json({ message: "TMDB_API_KEY not configured" });
       }
 
-      const type = req.query.type || "movie"; 
-      
-      try {
-        const tmdbRes = await fetchWithTimeout(`https://api.tmdb.org/3/${type}/${externalId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=credits,videos`);
-        
-        if (!tmdbRes.ok) {
-          const errorData = await tmdbRes.json().catch(() => ({}));
-          console.error("TMDB Detail Error:", errorData);
-          return res.status(tmdbRes.status).json({ message: "TMDB Content not found", details: errorData });
+      const typeCandidates = resolvedType ? [resolvedType] : ["movie", "tv"];
+      let tmdbData = null;
+      let usedType = null;
+      let lastError = null;
+
+      for (const type of typeCandidates) {
+        try {
+          const tmdbRes = await fetchWithTimeout(`https://api.tmdb.org/3/${type}/${externalId}?api_key=${process.env.TMDB_API_KEY}&append_to_response=credits,videos`);
+
+          if (!tmdbRes.ok) {
+            const errorData = await tmdbRes.json().catch(() => ({}));
+            lastError = { status: tmdbRes.status, details: errorData };
+            continue;
+          }
+
+          const fetchedData = await tmdbRes.json();
+
+          if (fetchedData.status_code || !fetchedData.id) {
+            lastError = { status: 404, details: fetchedData };
+            continue;
+          }
+
+          tmdbData = fetchedData;
+          usedType = type;
+          break;
+        } catch (err) {
+          lastError = { status: 503, error: err.message };
         }
-
-        const tmdbData = await tmdbRes.json();
-
-        if (tmdbData.status_code || !tmdbData.id) {
-          return res.status(404).json({ message: "TMDB Content not found" });
-        }
-
-        newContentData.type = type;
-        newContentData.title = tmdbData.title || tmdbData.name || "Unknown";
-        newContentData.description = tmdbData.overview || "";
-        newContentData.poster = tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : null;
-        newContentData.backdrop = tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : null;
-        newContentData.genres = tmdbData.genres?.map(g => g.name) || [];
-        newContentData.releaseDate = tmdbData.release_date || tmdbData.first_air_date;
-        newContentData.rating = tmdbData.vote_average || 0;
-        newContentData.language = tmdbData.spoken_languages?.map(l => l.english_name) || [];
-        
-        const trailer = tmdbData.videos?.results?.find(v => v.type === "Trailer" && v.site === "YouTube");
-        if (trailer) newContentData.trailer = `https://www.youtube.com/watch?v=${trailer.key}`;
-      } catch (err) {
-        console.error("TMDB Detail Fetch Error:", err.message);
-        return res.status(503).json({ message: "Unable to fetch TMDB content", error: err.message });
       }
+
+      if (!tmdbData) {
+        console.error("TMDB Detail Error:", lastError);
+        return res.status(lastError?.status || 404).json({ message: "TMDB Content not found", details: lastError });
+      }
+
+      newContentData.type = usedType;
+      newContentData.title = tmdbData.title || tmdbData.name || "Unknown";
+      newContentData.description = tmdbData.overview || "";
+      newContentData.poster = tmdbData.poster_path ? `https://image.tmdb.org/t/p/w500${tmdbData.poster_path}` : null;
+      newContentData.backdrop = tmdbData.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdbData.backdrop_path}` : null;
+      newContentData.genres = tmdbData.genres?.map(g => g.name) || [];
+      newContentData.releaseDate = tmdbData.release_date || tmdbData.first_air_date;
+      newContentData.rating = tmdbData.vote_average || 0;
+      newContentData.language = tmdbData.spoken_languages?.map(l => l.english_name) || [];
+      
+      const trailer = tmdbData.videos?.results?.find(v => v.type === "Trailer" && v.site === "YouTube");
+      if (trailer) newContentData.trailer = `https://www.youtube.com/watch?v=${trailer.key}`;
 
     } else if (source === "jikan") {
       try {

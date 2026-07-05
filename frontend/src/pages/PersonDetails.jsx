@@ -52,15 +52,15 @@ const PersonDetails = () => {
         </p>
 
         <h3 className="text-xl font-bold mb-4 text-[var(--color-neon-pink)]">Known For</h3>
-        {person.knownForExternalIds && person.knownForExternalIds.length > 0 ? (
+        {person.knownForItems && person.knownForItems.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {person.knownForExternalIds.map(workId => (
+            {person.knownForItems.map(work => (
               <Link 
-                to={`/details/${source}/${workId}`} 
-                key={workId}
+                to={`/details/${source}/${work.externalId}?type=${work.type}`} 
+                key={`${source}-${work.type}-${work.externalId}`}
                 className="glass-panel p-4 rounded-xl flex items-center justify-center text-center hover:neon-border hover:bg-[var(--color-electric-cyan)]/10 transition-all cursor-pointer aspect-square"
               >
-                <span className="text-sm font-bold text-white line-clamp-3">View Project #{workId}</span>
+                <span className="text-sm font-bold text-white line-clamp-3">{work.title}</span>
               </Link>
             ))}
           </div>

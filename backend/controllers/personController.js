@@ -45,13 +45,13 @@ exports.getPersonDetails = async (req, res) => {
     if (person) {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       // Fallback if timestamps are missing, though timestamps: true is on Schema
-      if (person.updatedAt && person.updatedAt > sevenDaysAgo) {
+      if (person.updatedAt && person.updatedAt > sevenDaysAgo && Array.isArray(person.knownForItems) && person.knownForItems.length > 0) {
         return res.status(200).json(person);
       }
     }
 
     let newPersonData = { source, externalId };
-    let knownForExternalIds = [];
+    let knownForItems = [];
 
     if (source === "tmdb") {
       if (!process.env.TMDB_API_KEY) {
@@ -78,11 +78,15 @@ exports.getPersonDetails = async (req, res) => {
         newPersonData.profilePic = tmdbData.profile_path ? `https://image.tmdb.org/t/p/w500${tmdbData.profile_path}` : null;
         
         if (tmdbData.combined_credits?.cast && Array.isArray(tmdbData.combined_credits.cast)) {
-          knownForExternalIds = tmdbData.combined_credits.cast
+          knownForItems = tmdbData.combined_credits.cast
             .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
             .slice(0, 10)
-            .map(item => item.id?.toString())
-            .filter(id => id);
+            .map(item => ({
+              externalId: item.id?.toString(),
+              type: item.media_type || (item.name ? "tv" : "movie"),
+              title: item.title || item.name || `Project ${item.id}`
+            }))
+            .filter(item => item.externalId && item.type);
         }
       } catch (err) {
         console.error("TMDB Person Fetch Error:", err.message);
@@ -110,10 +114,14 @@ exports.getPersonDetails = async (req, res) => {
         newPersonData.profilePic = jikanData.images?.jpg?.image_url;
 
         if (jikanData.anime && Array.isArray(jikanData.anime)) {
-          knownForExternalIds = jikanData.anime
+          knownForItems = jikanData.anime
             .slice(0, 10)
-            .map(item => item.anime?.mal_id?.toString())
-            .filter(id => id);
+            .map(item => ({
+              externalId: item.anime?.mal_id?.toString(),
+              type: "anime",
+              title: item.anime?.title || `Anime ${item.anime?.mal_id}`
+            }))
+            .filter(item => item.externalId);
         }
       } catch (err) {
         console.error("Jikan Person Fetch Error:", err.message);
@@ -124,6 +132,7 @@ exports.getPersonDetails = async (req, res) => {
     }
 
     // Upsert into DB
+    newPersonData.knownForItems = knownForItems;
     person = await Person.findOneAndUpdate(
       { source, externalId },
       { $set: newPersonData },
@@ -135,9 +144,9 @@ exports.getPersonDetails = async (req, res) => {
     // To stick to your schema, we might need an array of strings instead of ObjectIds for knownFor if we don't cache them all instantly.
     // For now, returning the raw data is sufficient for the bio page.
     
-    // We append the raw external IDs to the response so the frontend can render posters
     const responseObj = person.toObject();
-    responseObj.knownForExternalIds = knownForExternalIds;
+    responseObj.knownForItems = knownForItems;
+    responseObj.knownForExternalIds = knownForItems.map(item => item.externalId);
 
     res.status(200).json(responseObj);
   } catch (error) {

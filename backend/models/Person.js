@@ -14,6 +14,13 @@ const PersonSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: "Content"
     }
+  ],
+  knownForItems: [
+    {
+      externalId: String,
+      type: String,
+      title: String
+    }
   ]
 }, { timestamps: true });
 

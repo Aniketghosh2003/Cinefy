@@ -13,7 +13,11 @@ const ContentGridSection = ({ title, icon: Icon, data, limit = 10 }) => (
     </h2>
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       {data.slice(0, limit).map((item) => (
-        <Link to={`/details/${item.source}/${item.externalId}`} key={item.externalId} className="group flex flex-col">
+        <Link
+          to={`/details/${item.source}/${item.externalId}?type=${item.type}`}
+          key={`${item.source}-${item.type}-${item.externalId}`}
+          className="group flex flex-col"
+        >
           <div className="relative rounded-lg overflow-hidden aspect-[2/3] mb-2 transition-transform duration-300 group-hover:scale-105 shadow-lg group-hover:neon-border">
             {item.poster ? (
               <img src={item.poster} alt={item.title} className="w-full h-full object-cover" />

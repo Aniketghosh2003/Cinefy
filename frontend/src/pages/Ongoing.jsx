@@ -92,7 +92,11 @@ const Ongoing = () => {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
           {data.map((item) => (
-            <Link to={`/details/${item.source}/${item.externalId}`} key={item.externalId} className="group flex flex-col">
+            <Link
+              to={`/details/${item.source}/${item.externalId}?type=${item.type}`}
+              key={`${item.source}-${item.type}-${item.externalId}`}
+              className="group flex flex-col"
+            >
               <div className="relative rounded-xl overflow-hidden aspect-[2/3] mb-3 transition-transform duration-300 group-hover:scale-105 shadow-lg group-hover:neon-border">
                 {item.poster ? (
                   <img src={item.poster} alt={item.title} className="w-full h-full object-cover" />
