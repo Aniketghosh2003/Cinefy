@@ -68,3 +68,26 @@ exports.toggleLike = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
+// Add Item to Collection
+exports.addItemToCollection = async (req, res) => {
+  try {
+    const { collectionId, contentId } = req.body;
+    const collection = await Collection.findOne({ _id: collectionId, userId: req.user.id });
+
+    if (!collection) {
+      return res.status(404).json({ message: "Collection not found" });
+    }
+
+    if (collection.items.includes(contentId)) {
+      return res.status(400).json({ message: "Item already in collection" });
+    }
+
+    collection.items.push(contentId);
+    await collection.save();
+
+    res.status(200).json(collection);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Film, Home, Calendar, Grid, Users, Sparkles, Tag, Search, User as UserIcon } from 'lucide-react';
+import { Film, Home, Calendar, Grid, Users, Sparkles, Tag, Search, User as UserIcon, LogIn } from 'lucide-react';
+import AuthModal from './AuthModal';
 
 // Custom NavItem that only shows text when active
 const NavItem = ({ to, icon: Icon, label }) => {
@@ -37,6 +38,50 @@ const NavItem = ({ to, icon: Icon, label }) => {
 };
 
 const Layout = () => {
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setToken(localStorage.getItem('token'));
+      const saved = localStorage.getItem('user');
+      setUser(saved ? JSON.parse(saved) : null);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('auth-change', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-change', handleStorageChange);
+    };
+  }, []);
+
+  const handleAuthSuccess = (data) => {
+    setToken(data.token);
+    setUser({
+      _id: data._id,
+      username: data.username,
+      email: data.email,
+      profilePic: data.profilePic || null
+    });
+    window.dispatchEvent(new Event('auth-change'));
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+    window.dispatchEvent(new Event('auth-change'));
+  };
+
+  const triggerLogin = () => {
+    setShowAuthModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-(--color-void) text-white flex flex-col">
       {/* Top Navbar */}
@@ -59,15 +104,30 @@ const Layout = () => {
           <NavItem to="/search" icon={Search} label="Search" />
         </nav>
 
-        <div className="w-48 flex justify-end">
-          <NavItem to="/profile" icon={UserIcon} label="Profile" />
+        <div className="w-48 flex justify-end items-center gap-2">
+          {token ? (
+            <NavItem to="/profile" icon={UserIcon} label="Profile" />
+          ) : (
+            <button 
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-sm font-bold transition-all border border-white/5 cursor-pointer text-white"
+            >
+              <LogIn className="w-4 h-4" /> Login
+            </button>
+          )}
         </div>
       </header>
 
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-7xl mx-auto p-6">
-        <Outlet />
+        <Outlet context={{ token, user, triggerLogin, handleLogout }} />
       </main>
+
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   );
 };

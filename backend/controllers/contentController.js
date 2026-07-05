@@ -48,14 +48,14 @@ const generateMoodWithGrok = async (title, description) => {
   try {
     if (!process.env.GROK_API_KEY) return ["Unknown"];
     
-    const response = await fetchWithTimeout("https://api.x.ai/v1/chat/completions", {
+    const response = await fetchWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${process.env.GROK_API_KEY}`
       },
       body: JSON.stringify({
-        model: "grok-beta",
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: "You are a movie and anime expert. Given a title and description, return exactly 3 mood keywords in a comma-separated string (e.g. 'Mind-Blowing,Emotional,Dark'). Do not return any other text." },
           { role: "user", content: `Title: ${title}\nDescription: ${description}` }
@@ -70,7 +70,7 @@ const generateMoodWithGrok = async (title, description) => {
     }
     return ["Unknown"];
   } catch (error) {
-    console.error("Grok API Error:", error.message);
+    console.error("Groq API Error:", error.message);
     return ["Unknown"];
   }
 };

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { useOutletContext, Link } from 'react-router-dom';
 import { Grid as GridIcon, Plus, Heart } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
 
 const Grids = () => {
+  const { token, triggerLogin } = useOutletContext();
   const [grids, setGrids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all' or 'mine'
@@ -12,10 +14,17 @@ const Grids = () => {
     const fetchGrids = async () => {
       try {
         setLoading(true);
-        // We fetch all grids. If we had authentication, 'mine' would fetch user's grids.
-        const res = await fetch(`${API_URL}/grids`);
-        const json = await res.json();
-        setGrids(json);
+        if (activeTab === 'all') {
+          const res = await fetch(`${API_URL}/grids`);
+          const json = await res.json();
+          setGrids(json);
+        } else if (activeTab === 'mine' && token) {
+          const res = await fetch(`${API_URL}/grids/mine`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const json = await res.json();
+          setGrids(json);
+        }
       } catch (error) {
         console.error("Error fetching grids:", error);
       } finally {
@@ -23,7 +32,9 @@ const Grids = () => {
       }
     };
     fetchGrids();
-  }, [activeTab]);
+  }, [activeTab, token]);
+
+  const showLoginPrompt = activeTab === 'mine' && !token;
 
   return (
     <div className="pb-10 max-w-6xl mx-auto">
@@ -33,34 +44,36 @@ const Grids = () => {
           Community 3x3 Grids
         </h1>
 
-        <button className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--color-neon-pink)] text-white font-bold rounded-lg hover:scale-105 transition-transform shadow-[0_0_15px_rgba(255,42,95,0.4)]">
-          <Plus className="w-5 h-5" /> Create Grid
-        </button>
+        {token && (
+          <button className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--color-neon-pink)] text-white font-bold rounded-lg hover:scale-105 transition-transform shadow-[0_0_15px_rgba(255,42,95,0.4)] cursor-pointer">
+            <Plus className="w-5 h-5" /> Create Grid
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 mb-8 border-b border-white/10 pb-2">
+      <div className="flex flex-wrap gap-4 mb-8 border-b border-white/10 pb-2">
         <button 
           onClick={() => setActiveTab('all')}
-          className={`pb-2 px-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${activeTab === 'all' ? 'text-[var(--color-electric-cyan)] border-[var(--color-electric-cyan)]' : 'text-gray-500 border-transparent hover:text-white'}`}
+          className={`pb-2 px-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer ${activeTab === 'all' ? 'text-[var(--color-electric-cyan)] border-[var(--color-electric-cyan)]' : 'text-gray-500 border-transparent hover:text-white'}`}
         >
           All Grids
         </button>
         <button 
           onClick={() => setActiveTab('mine')}
-          className={`pb-2 px-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${activeTab === 'mine' ? 'text-[var(--color-electric-cyan)] border-[var(--color-electric-cyan)]' : 'text-gray-500 border-transparent hover:text-white'}`}
+          className={`pb-2 px-2 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 cursor-pointer ${activeTab === 'mine' ? 'text-[var(--color-electric-cyan)] border-[var(--color-electric-cyan)]' : 'text-gray-500 border-transparent hover:text-white'}`}
         >
           My Grids
         </button>
       </div>
 
       {/* Content */}
-      {activeTab === 'mine' ? (
+      {showLoginPrompt ? (
         <div className="text-center py-20 glass-panel rounded-xl">
           <GridIcon className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-          <h2 className="text-xl font-bold text-white mb-2">You haven't created any grids yet</h2>
-          <p className="text-[var(--color-text-secondary)] mb-6">Log in to create your ultimate 3x3 favorites matrix!</p>
-          <button className="px-6 py-2 bg-[var(--color-electric-cyan)] text-black font-bold rounded-lg">Login to Create</button>
+          <h2 className="text-xl font-bold text-white mb-2">Please Login to View</h2>
+          <p className="text-[var(--color-text-secondary)] mb-6">Authentication is required to view or create your ultimate 3x3 favorites matrix!</p>
+          <button onClick={triggerLogin} className="px-6 py-2 bg-[var(--color-electric-cyan)] text-black font-bold rounded-lg cursor-pointer">Login</button>
         </div>
       ) : loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-pulse">
@@ -80,32 +93,24 @@ const Grids = () => {
                 </div>
               </div>
               
-              {/* Actual 3x3 Grid Display */}
-              <div className="grid grid-cols-3 gap-1 aspect-square rounded-xl overflow-hidden bg-black/50">
-                {[...Array(9)].map((_, index) => {
-                  const item = grid.items?.[index];
-                  return (
-                    <div key={index} className="w-full h-full bg-white/5 relative group/item">
-                      {item && item.poster ? (
-                        <>
-                          <img src={item.poster} className="w-full h-full object-cover" alt="" />
-                          <div className="absolute inset-0 bg-black/80 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center p-2 text-center">
-                            <span className="text-[10px] font-bold text-[var(--color-electric-cyan)]">{item.title}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[8px] text-gray-600">Empty</div>
-                      )}
-                    </div>
-                  );
-                })}
+              {/* 3x3 Grid Layout */}
+              <div className="grid grid-cols-3 gap-1 aspect-square rounded-xl overflow-hidden border border-white/5 bg-black/20">
+                {(grid.items || []).map((item, index) => (
+                  <div key={index} className="aspect-square bg-gray-800 border border-white/5 relative overflow-hidden group/item">
+                    {item ? (
+                      <img src={item.poster} className="w-full h-full object-cover group-hover/item:scale-105 transition-transform" alt={item.title} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-700 text-xs">-</div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           ))}
         </div>
       ) : (
         <div className="text-center py-20 text-gray-500">
-          No grids found in the community yet. Be the first to create one!
+          No grids found. {activeTab === 'mine' ? "You haven't created a grid yet!" : "Be the first to share your 3x3 grid favorites matrix!"}
         </div>
       )}
     </div>

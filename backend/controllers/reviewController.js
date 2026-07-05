@@ -61,3 +61,16 @@ exports.deleteReview = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
+// Get Reviews for current user
+exports.getUserReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({ userId: req.user.id })
+      .populate("contentId")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
