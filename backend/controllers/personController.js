@@ -1,11 +1,11 @@
 const Person = require("../models/Person");
+const { getCache, setCache, delCache } = require("../redisClient");
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Fetch wrapper with timeout
 const fetchWithTimeout = async (url, options = {}, timeout = 10000, retries = 3) => {
   try {
-    console.log(`[FETCH] ${options.method || 'GET'} ${url}`);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     
@@ -15,10 +15,8 @@ const fetchWithTimeout = async (url, options = {}, timeout = 10000, retries = 3)
     });
     
     clearTimeout(timeoutId);
-    console.log(`[FETCH] Response Status: ${response.status}`);
     
     if (response.status === 429 && retries > 0) {
-      console.log(`[FETCH RATE LIMITED] Retrying ${url} in 1.5s... (${retries} retries left)`);
       await sleep(1500);
       return fetchWithTimeout(url, options, timeout, retries - 1);
     }
@@ -26,11 +24,11 @@ const fetchWithTimeout = async (url, options = {}, timeout = 10000, retries = 3)
     return response;
   } catch (error) {
     if (retries > 0) {
-      console.log(`[FETCH ERROR] Retrying ${url} in 1.5s... (${retries} retries left)`);
       await sleep(1500);
       return fetchWithTimeout(url, options, timeout, retries - 1);
     }
-    console.error(`[FETCH ERROR] ${url}:`, error.message || error);
+    const safeUrl = url.split('?')[0];
+    console.error(`[FETCH ERROR] ${safeUrl}:`, error.message || error);
     throw error;
   }
 };
@@ -38,7 +36,14 @@ const fetchWithTimeout = async (url, options = {}, timeout = 10000, retries = 3)
 exports.getPersonDetails = async (req, res) => {
   const { source, externalId } = req.params;
   try {
-    // 1. Check local DB cache
+    // 1. Check Redis cache first
+    const cacheKey = `person:details:${source}:${externalId}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
+    // 2. Check local DB cache
     let person = await Person.findOne({ source, externalId }).populate("knownFor");
 
     // If exists and was fetched less than 7 days ago, return it
@@ -46,6 +51,8 @@ exports.getPersonDetails = async (req, res) => {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       // Fallback if timestamps are missing, though timestamps: true is on Schema
       if (person.updatedAt && person.updatedAt > sevenDaysAgo && Array.isArray(person.knownForItems) && person.knownForItems.length > 0) {
+        // Cache in Redis for 1 hour
+        await setCache(cacheKey, person.toObject(), 3600);
         return res.status(200).json(person);
       }
     }
@@ -147,6 +154,9 @@ exports.getPersonDetails = async (req, res) => {
     const responseObj = person.toObject();
     responseObj.knownForItems = knownForItems;
     responseObj.knownForExternalIds = knownForItems.map(item => item.externalId);
+
+    // Cache in Redis for 1 hour
+    await setCache(cacheKey, responseObj, 3600);
 
     res.status(200).json(responseObj);
   } catch (error) {

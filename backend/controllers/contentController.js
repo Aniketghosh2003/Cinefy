@@ -1,4 +1,5 @@
 const Content = require("../models/Content");
+const { getCache, setCache, delCache } = require("../redisClient");
 
 // --- Helper Functions for API calls ---
 
@@ -80,6 +81,13 @@ const generateMoodWithGrok = async (title, description) => {
 // Get Trending (Direct from TMDB and Jikan)
 exports.getTrending = async (req, res) => {
   try {
+    // Check Redis cache first
+    const cacheKey = "content:trending";
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     if (!process.env.TMDB_API_KEY) {
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
@@ -138,6 +146,9 @@ exports.getTrending = async (req, res) => {
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
 
+    // Cache result for 10 minutes
+    await setCache(cacheKey, combined, 600);
+
     res.status(200).json(combined);
   } catch (error) {
     console.error("Trending Error:", error);
@@ -150,6 +161,13 @@ exports.searchContent = async (req, res) => {
   try {
     const { q } = req.query;
     if (!q) return res.status(400).json({ message: "Query parameter 'q' is required" });
+
+    // Check Redis cache
+    const cacheKey = `content:search:${q.toLowerCase()}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
 
     if (!process.env.TMDB_API_KEY) {
       return res.status(200).json([]);
@@ -191,13 +209,15 @@ exports.searchContent = async (req, res) => {
       }
     } catch (err) {
       console.error("Jikan Search Error:", err.message);
-      // Check mock data
-      if (MOCK_SEARCH_RESULTS[q.toLowerCase()]) {
-        return res.status(200).json(MOCK_SEARCH_RESULTS[q.toLowerCase()]);
-      }
     }
 
     const results = [...formattedTmdb, ...formattedJikan];
+
+    // Cache search results for 5 minutes
+    if (results.length > 0) {
+      await setCache(cacheKey, results, 300);
+    }
+
     res.status(200).json(results);
   } catch (error) {
     console.error("Search Error:", error.message);
@@ -209,7 +229,14 @@ exports.searchContent = async (req, res) => {
 exports.getContentDetails = async (req, res) => {
   const { source, externalId } = req.params;
   try {
-    // 1. Check local DB cache
+    // 1. Check Redis cache first
+    const cacheKey = `content:details:${source}:${externalId}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
+    // 2. Check local DB cache
     let content = await Content.findOne({ source, externalId });
     let resolvedType = req.query.type;
 
@@ -217,15 +244,21 @@ exports.getContentDetails = async (req, res) => {
     if (content) {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       if (content.lastFetched > sevenDaysAgo) {
+        // Cache in Redis for 1 hour
+        await setCache(cacheKey, content.toObject(), 3600);
         return res.status(200).json(content);
       }
 
       if (!resolvedType && content.type) {
         resolvedType = content.type;
       }
+
+      // Stale — delete old document before re-fetching
+      await Content.deleteOne({ source, externalId });
+      await delCache(cacheKey);
     }
 
-    // 2. Not in DB or stale -> Fetch from External API
+    // 3. Not in DB or stale -> Fetch from External API
     let newContentData = { source, externalId };
 
     if (source === "tmdb") {
@@ -281,6 +314,36 @@ exports.getContentDetails = async (req, res) => {
       const trailer = tmdbData.videos?.results?.find(v => v.type === "Trailer" && v.site === "YouTube");
       if (trailer) newContentData.trailer = `https://www.youtube.com/watch?v=${trailer.key}`;
 
+      // --- FIX #3: Extract Cast & Crew from TMDB credits ---
+      if (tmdbData.credits) {
+        // Top 10 cast members
+        if (Array.isArray(tmdbData.credits.cast)) {
+          newContentData.cast = tmdbData.credits.cast
+            .slice(0, 10)
+            .map(person => ({
+              externalId: person.id?.toString(),
+              name: person.name || "Unknown",
+              profilePic: person.profile_path
+                ? `https://image.tmdb.org/t/p/w185${person.profile_path}`
+                : null
+            }))
+            .filter(p => p.externalId);
+        }
+
+        // Director and key crew
+        if (Array.isArray(tmdbData.credits.crew)) {
+          newContentData.crew = tmdbData.credits.crew
+            .filter(person => ["Director", "Producer", "Writer", "Screenplay"].includes(person.job))
+            .slice(0, 5)
+            .map(person => ({
+              externalId: person.id?.toString(),
+              name: person.name || "Unknown",
+              role: person.job
+            }))
+            .filter(p => p.externalId);
+        }
+      }
+
     } else if (source === "jikan") {
       try {
         const jikanRes = await fetchWithTimeout(`https://api.jikan.moe/v4/anime/${externalId}/full`);
@@ -306,6 +369,48 @@ exports.getContentDetails = async (req, res) => {
         newContentData.rating = jikanData.score || 0;
         newContentData.language = ["Japanese"];
         if (jikanData.trailer?.url) newContentData.trailer = jikanData.trailer.url;
+
+        // --- FIX #3: Fetch characters/voice actors from Jikan ---
+        try {
+          // Jikan rate-limits, so add a small delay before the second request
+          await sleep(500);
+          const charRes = await fetchWithTimeout(`https://api.jikan.moe/v4/anime/${externalId}/characters`);
+          if (charRes.ok) {
+            const charJson = await charRes.json();
+            const characters = charJson.data || [];
+
+            // Extract top 10 voice actors (Japanese VA preferred)
+            newContentData.cast = characters
+              .filter(c => c.role === "Main" || c.role === "Supporting")
+              .slice(0, 10)
+              .map(c => {
+                // Find the Japanese VA first, fallback to first VA
+                const va = c.voice_actors?.find(v => v.language === "Japanese")
+                  || c.voice_actors?.[0];
+                return {
+                  externalId: va?.person?.mal_id?.toString() || c.character?.mal_id?.toString(),
+                  name: va?.person?.name || c.character?.name || "Unknown",
+                  profilePic: va?.person?.images?.jpg?.image_url
+                    || c.character?.images?.jpg?.image_url
+                    || null
+                };
+              })
+              .filter(p => p.externalId);
+
+            // Extract staff/crew from the main data if available
+            if (jikanData.studios && Array.isArray(jikanData.studios)) {
+              newContentData.crew = jikanData.studios.map(s => ({
+                externalId: s.mal_id?.toString(),
+                name: s.name || "Unknown",
+                role: "Studio"
+              })).filter(s => s.externalId);
+            }
+          }
+        } catch (charErr) {
+          console.error("Jikan Characters Fetch Error:", charErr.message);
+          // Non-fatal — content still saves without cast
+        }
+
       } catch (err) {
         console.error("Jikan Detail Fetch Error:", err.message);
         return res.status(503).json({ message: "Unable to fetch Jikan content", error: err.message });
@@ -314,16 +419,15 @@ exports.getContentDetails = async (req, res) => {
       return res.status(400).json({ message: "Invalid source" });
     }
 
-    // 3. Generate Mood via Grok AI
+    // 4. Generate Mood via Grok AI
     newContentData.mood = await generateMoodWithGrok(newContentData.title, newContentData.description);
     newContentData.lastFetched = Date.now();
 
-    // 4. Upsert (Save to MongoDB Cache Layer)
-    content = await Content.findOneAndUpdate(
-      { source, externalId },
-      { $set: newContentData },
-      { upsert: true, returnDocument: 'after' }
-    );
+    // 5. Insert fresh document (old one was deleted above)
+    content = await Content.create(newContentData);
+
+    // 6. Cache in Redis for 1 hour
+    await setCache(cacheKey, content.toObject(), 3600);
 
     res.status(200).json(content);
   } catch (error) {
@@ -409,11 +513,19 @@ const safeFetchAndFormat = async (url, formatFn, typeArg) => {
 
 exports.getTop = async (req, res) => {
   try {
+    const { type } = req.query;
+
+    // Check Redis cache
+    const cacheKey = `content:top:${type || "all"}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     if (!process.env.TMDB_API_KEY) {
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
 
-    const { type } = req.query;
     let movieTvResults = [];
     let animeResults = [];
     const limit = type ? 20 : 5;
@@ -434,6 +546,9 @@ exports.getTop = async (req, res) => {
     if (combined.length === 0) {
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
+
+    // Cache for 30 minutes
+    await setCache(cacheKey, combined, 1800);
 
     res.status(200).json(combined);
   } catch (error) {
@@ -458,11 +573,19 @@ const getTodaysAnime = async () => {
 
 exports.getOngoing = async (req, res) => {
   try {
+    const { type } = req.query;
+
+    // Check Redis cache
+    const cacheKey = `content:ongoing:${type || "all"}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     if (!process.env.TMDB_API_KEY) {
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
 
-    const { type } = req.query;
     let movieTvResults = [];
     let animeResults = [];
     const limit = 20;
@@ -488,6 +611,9 @@ exports.getOngoing = async (req, res) => {
       return res.status(200).json(MOCK_TRENDING_DATA);
     }
 
+    // Cache for 15 minutes
+    await setCache(cacheKey, combined, 900);
+
     res.status(200).json(combined);
   } catch (error) {
     console.error("Get Ongoing Error:", error.message);
@@ -498,6 +624,14 @@ exports.getOngoing = async (req, res) => {
 exports.getUpcoming = async (req, res) => {
   try {
     const { type } = req.query;
+
+    // Check Redis cache
+    const cacheKey = `content:upcoming:${type || "all"}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     let movieTvResults = [];
     let animeResults = [];
     const limit = type ? 20 : 5;
@@ -509,7 +643,14 @@ exports.getUpcoming = async (req, res) => {
       animeResults = await safeFetchAndFormat(`https://api.jikan.moe/v4/seasons/upcoming`, formatJikanArray);
     }
 
-    res.status(200).json([...movieTvResults.slice(0, limit), ...animeResults.slice(0, limit)]);
+    const result = [...movieTvResults.slice(0, limit), ...animeResults.slice(0, limit)];
+
+    // Cache for 30 minutes
+    if (result.length > 0) {
+      await setCache(cacheKey, result, 1800);
+    }
+
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
