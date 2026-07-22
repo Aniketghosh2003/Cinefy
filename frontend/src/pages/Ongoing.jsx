@@ -78,7 +78,7 @@ const Ongoing = () => {
               key={type}
               onClick={() => setFilter(type)}
               className={`px-4 py-1.5 rounded-md text-sm font-bold capitalize transition-colors ${
-                filter === type ? 'bg-[var(--color-electric-cyan)] text-black' : 'text-gray-400 hover:text-white'
+                filter === type ? 'bg-[var(--color-electric-cyan)] text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
               {type}

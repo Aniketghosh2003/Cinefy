@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { Library, Plus, Bookmark, Clock, Users } from 'lucide-react';
+import { Library, Plus, Bookmark, Clock, Users, X } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -11,35 +11,84 @@ const Community = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'mine', 'watchlater'
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        if (activeTab === 'all') {
-          const res = await fetch(`${API_URL}/collections`);
-          const json = await res.json();
-          setCollections(json);
-        } else if (activeTab === 'mine' && token) {
-          const res = await fetch(`${API_URL}/collections/mine`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const json = await res.json();
-          setCollections(json);
-        } else if (activeTab === 'watchlater' && token) {
-          const res = await fetch(`${API_URL}/users/profile`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const json = await res.json();
-          setWatchLaterItems(json.watchLater || []);
-        }
-      } catch (error) {
-        console.error("Error fetching collections/data:", error);
-      } finally {
-        setLoading(false);
+  // Create Collection Modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newIsPrivate, setNewIsPrivate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      if (activeTab === 'all') {
+        const res = await fetch(`${API_URL}/collections`);
+        const json = await res.json();
+        setCollections(json);
+      } else if (activeTab === 'mine' && token) {
+        const res = await fetch(`${API_URL}/collections/mine`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        setCollections(json);
+      } else if (activeTab === 'watchlater' && token) {
+        const res = await fetch(`${API_URL}/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        setWatchLaterItems(json.watchLater || []);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching collections/data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [activeTab, token]);
+
+  const handleCreateCollection = async (e) => {
+    e.preventDefault();
+    if (!token) {
+      triggerLogin();
+      return;
+    }
+    setCreating(true);
+    setCreateError('');
+    try {
+      const res = await fetch(`${API_URL}/collections`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: newTitle,
+          description: newDescription,
+          items: [],
+          isPrivate: newIsPrivate
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to create collection');
+      }
+      // Reset and close modal
+      setShowCreateModal(false);
+      setNewTitle('');
+      setNewDescription('');
+      setNewIsPrivate(false);
+      // Refresh collections
+      fetchData();
+    } catch (err) {
+      setCreateError(err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const showLoginPrompt = (activeTab === 'mine' || activeTab === 'watchlater') && !token;
 
@@ -52,7 +101,10 @@ const Community = () => {
         </h1>
 
         {token && (
-          <button className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--color-electric-cyan)] text-black font-bold rounded-lg hover:scale-105 transition-transform shadow-[0_0_15px_rgba(0,229,255,0.4)] cursor-pointer">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--color-anime-purple)] text-white font-bold rounded-lg hover:scale-105 transition-transform shadow-[0_0_15px_rgba(138,43,226,0.4)] cursor-pointer"
+          >
             <Plus className="w-5 h-5" /> Create List
           </button>
         )}
@@ -86,7 +138,7 @@ const Community = () => {
           <Bookmark className="w-16 h-16 mx-auto mb-4 text-gray-600" />
           <h2 className="text-xl font-bold text-white mb-2">Please Login to View</h2>
           <p className="text-[var(--color-text-secondary)] mb-6">Authentication is required to view your personal {activeTab === 'watchlater' ? 'Watch Later list' : 'Collections'}.</p>
-          <button onClick={triggerLogin} className="px-6 py-2 bg-[var(--color-electric-cyan)] text-black font-bold rounded-lg cursor-pointer">Login</button>
+          <button onClick={triggerLogin} className="px-6 py-2 bg-[var(--color-anime-purple)] text-white font-bold rounded-lg cursor-pointer">Login</button>
         </div>
       ) : loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
@@ -134,6 +186,74 @@ const Community = () => {
       ) : (
         <div className="text-center py-20 text-gray-500">
           No collections found. Be the first to create a custom list like "Best Horror of 2024"!
+        </div>
+      )}
+
+      {/* Create Collection Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-lg glass-panel rounded-3xl overflow-hidden shadow-2xl p-8 border border-white/10">
+            {/* Close Button */}
+            <button 
+              onClick={() => { setShowCreateModal(false); setCreateError(''); }}
+              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all border border-white/5 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-black text-white tracking-wide mb-1 text-gradient">CREATE COLLECTION</h2>
+              <p className="text-sm text-[var(--color-text-secondary)] font-semibold">Build your own curated list of favorites</p>
+            </div>
+
+            {createError && (
+              <div className="mb-4 p-3 rounded-lg bg-[var(--color-crimson)]/20 border border-[var(--color-crimson)]/50 text-red-200 text-sm font-semibold text-center">
+                {createError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateCollection} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Collection Name</label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="e.g. Best Sci-Fi Movies"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-accent)] transition-all font-semibold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Description (Optional)</label>
+                <textarea 
+                  rows="3"
+                  placeholder="Tell others what this list is about..."
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-accent)] transition-all font-semibold text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setNewIsPrivate(!newIsPrivate)}
+                  className={`w-12 h-7 rounded-full transition-all flex items-center px-1 cursor-pointer ${newIsPrivate ? 'bg-[var(--color-neon-pink)] justify-end' : 'bg-white/10 justify-start'}`}
+                >
+                  <div className="w-5 h-5 rounded-full bg-white shadow-md transition-all" />
+                </button>
+                <span className="text-sm font-semibold text-gray-300">Private Collection</span>
+              </div>
+              <button
+                type="submit"
+                disabled={creating}
+                className="w-full py-3.5 rounded-xl bg-[var(--color-anime-purple)] text-white hover:bg-[var(--color-anime-purple)]/80 font-black text-md transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(138,43,226,0.3)] disabled:opacity-50 mt-4 cursor-pointer"
+              >
+                {creating ? 'Creating...' : 'CREATE COLLECTION'}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

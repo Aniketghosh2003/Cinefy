@@ -433,7 +433,7 @@ const ContentDetails = () => {
              )}
              <button 
                onClick={handleToggleWatched}
-               className={`flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-electric-cyan)] hover:text-black font-bold transition-colors flex items-center justify-center gap-2 ${isWatched ? 'bg-[var(--color-electric-cyan)] text-black border border-[var(--color-electric-cyan)]' : 'text-white'}`}
+               className={`flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-green-500 hover:text-white font-bold transition-colors flex items-center justify-center gap-2 ${isWatched ? 'bg-green-500 text-white border border-green-500' : 'text-white'}`}
              >
                <CheckCircle className="w-5 h-5"/> Watched
              </button>
@@ -563,9 +563,9 @@ const ContentDetails = () => {
              )}
              <button 
                onClick={handleToggleWatched}
-               className={`w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-electric-cyan)] hover:text-black font-black transition-all flex items-center justify-center gap-3 text-lg ${isWatched ? 'bg-[var(--color-electric-cyan)] text-black border border-[var(--color-electric-cyan)]' : 'text-white'}`}
+               className={`w-full glass-panel px-6 py-4 rounded-xl hover:bg-green-500 hover:text-white font-black transition-all flex items-center justify-center gap-3 text-lg ${isWatched ? 'bg-green-500 text-white border border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'text-white'}`}
              >
-               <CheckCircle className="w-6 h-6"/> {isWatched ? 'Watched' : 'Mark as Watched'}
+               <CheckCircle className="w-6 h-6"/> {isWatched ? 'Watched ✓' : 'Mark as Watched'}
              </button>
              <button 
                onClick={handleToggleWatchLater}
@@ -730,7 +730,7 @@ const ContentDetails = () => {
               <button 
                 type="submit"
                 disabled={submittingReview}
-                className="w-full py-3.5 rounded-xl bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)] font-black text-md transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(212,165,116,0.25)] disabled:opacity-50 mt-6 cursor-pointer"
+                className="w-full py-3.5 rounded-xl bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] font-black text-md transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(212,165,116,0.25)] disabled:opacity-50 mt-6 cursor-pointer"
               >
                 {submittingReview ? 'Submitting...' : 'SUBMIT REVIEW'}
               </button>
@@ -816,7 +816,7 @@ const ContentDetails = () => {
                 <button
                   type="submit"
                   disabled={addingToColLoading}
-                  className="w-full py-3.5 rounded-xl bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent-hover)] font-black text-md transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(212,165,116,0.2)] disabled:opacity-50 cursor-pointer"
+                  className="w-full py-3.5 rounded-xl bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] font-black text-md transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(212,165,116,0.2)] disabled:opacity-50 cursor-pointer"
                 >
                   {addingToColLoading ? 'Saving...' : 'CREATE & ADD'}
                 </button>

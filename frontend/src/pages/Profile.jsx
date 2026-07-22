@@ -108,7 +108,7 @@ const Profile = () => {
           <div className="flex items-center justify-center gap-4">
             <button
               onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-[var(--color-electric-cyan)] text-black font-bold rounded-xl hover:opacity-90 transition-all"
+              className="px-6 py-3 bg-[var(--color-electric-cyan)] text-white font-bold rounded-xl hover:opacity-90 transition-all"
             >
               Retry
             </button>
@@ -157,7 +157,7 @@ const Profile = () => {
                   onChange={(e) => setUsernameInput(e.target.value)}
                   className="bg-black/50 border border-[var(--color-electric-cyan)] rounded-lg px-4 py-2 text-xl font-bold text-white focus:outline-none"
                 />
-                <button onClick={handleEditToggle} className="bg-[var(--color-electric-cyan)] text-black font-bold py-2 rounded-lg">Save Changes</button>
+                <button onClick={handleEditToggle} className="bg-[var(--color-electric-cyan)] text-white font-bold py-2 rounded-lg">Save Changes</button>
               </div>
             ) : (
               <>
