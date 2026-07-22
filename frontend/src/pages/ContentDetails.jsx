@@ -161,6 +161,10 @@ const ContentDetails = () => {
       triggerLogin();
       return;
     }
+    if (!content._id) {
+      alert('This content is still loading into our database. Please wait a moment and try again.');
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/users/watched`, {
         method: 'POST',
@@ -171,11 +175,20 @@ const ContentDetails = () => {
         body: JSON.stringify({ contentId: content._id })
       });
       if (res.ok) {
-        const data = await res.json();
-        const hasWatched = (data.watched || []).includes(content._id);
-        const hasWatchLater = (data.watchLater || []).includes(content._id);
-        setIsWatched(hasWatched);
-        setIsWatchLater(hasWatchLater);
+        // Re-fetch profile to get accurate populated state
+        const profileRes = await fetch(`${API_URL}/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          const hasWatched = (profile.watched || []).some(w => (w._id || w) === content._id);
+          const hasWatchLater = (profile.watchLater || []).some(w => (w._id || w) === content._id);
+          setIsWatched(hasWatched);
+          setIsWatchLater(hasWatchLater);
+        }
+      } else {
+        const errData = await res.json();
+        console.error('Toggle watched failed:', errData.message);
       }
     } catch (error) {
       console.error("Error toggling watched:", error);
@@ -185,6 +198,10 @@ const ContentDetails = () => {
   const handleToggleWatchLater = async () => {
     if (!token) {
       triggerLogin();
+      return;
+    }
+    if (!content._id) {
+      alert('This content is still loading into our database. Please wait a moment and try again.');
       return;
     }
     try {
@@ -197,12 +214,20 @@ const ContentDetails = () => {
         body: JSON.stringify({ contentId: content._id })
       });
       if (res.ok) {
-        const data = await res.json();
-        const hasWatchLater = (data || []).includes(content._id);
-        setIsWatchLater(hasWatchLater);
-        if (hasWatchLater) {
-          setIsWatched(false);
+        // Re-fetch profile to get accurate populated state
+        const profileRes = await fetch(`${API_URL}/users/profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          const hasWatched = (profile.watched || []).some(w => (w._id || w) === content._id);
+          const hasWatchLater = (profile.watchLater || []).some(w => (w._id || w) === content._id);
+          setIsWatched(hasWatched);
+          setIsWatchLater(hasWatchLater);
         }
+      } else {
+        const errData = await res.json();
+        console.error('Toggle watch later failed:', errData.message);
       }
     } catch (error) {
       console.error("Error toggling watch later:", error);
@@ -343,9 +368,9 @@ const ContentDetails = () => {
     : content.trailer;
 
   return (
-    <div className="pb-20 max-w-7xl mx-auto">
+    <div className="pb-20">
       {/* 1. TOP SECTION: Trailer & Poster */}
-      <div className="relative w-full h-[500px] md:h-[600px] rounded-3xl overflow-hidden mb-10 glass-panel neon-border">
+      <div className="relative w-full h-[420px] md:h-[500px] rounded-3xl overflow-hidden mb-10 glass-panel neon-border">
         {content.trailer && isPlayingBackground ? (
           <iframe 
             src={embedUrl} 
@@ -392,10 +417,10 @@ const ContentDetails = () => {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-10">
+      <div className="flex flex-col lg:flex-row gap-8">
         
-        {/* 2. LEFT MAIN BODY: Overview, Cast, Reviews */}
-        <div className="flex-1">
+        {/* 2. LEFT MAIN BODY: Overview, Cast, Reviews (70%) */}
+        <div className="w-full lg:w-[70%]">
           {/* Action Buttons (Mobile visible, but mainly for Layout flow) */}
           <div className="flex flex-wrap gap-4 mb-10 lg:hidden">
              {content.trailer && (
@@ -524,7 +549,7 @@ const ContentDetails = () => {
         </div>
 
         {/* 3. RIGHT SIDEBAR: Actions & Platforms */}
-        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-6">
+        <div className="w-full lg:w-[30%] flex-shrink-0 flex flex-col gap-6">
           
           {/* Action Buttons (Desktop) */}
           <div className="hidden lg:flex flex-col gap-3 sticky top-24">

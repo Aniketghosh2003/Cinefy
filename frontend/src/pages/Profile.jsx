@@ -15,6 +15,7 @@ const Profile = () => {
   const [userProfile, setUserProfile] = useState(null);
   const [userReviews, setUserReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!token) {
@@ -25,6 +26,7 @@ const Profile = () => {
     const fetchProfileAndData = async () => {
       try {
         setLoading(true);
+        setError(null);
         // Fetch User Profile (fully populated watched/watchLater lists)
         const profileRes = await fetch(`${API_URL}/users/profile`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -33,6 +35,9 @@ const Profile = () => {
           const profileData = await profileRes.json();
           setUserProfile(profileData);
           setUsernameInput(profileData.username);
+        } else {
+          const errData = await profileRes.json().catch(() => ({}));
+          throw new Error(errData.message || `Failed to load profile (${profileRes.status})`);
         }
 
         // Fetch User Reviews
@@ -45,6 +50,7 @@ const Profile = () => {
         }
       } catch (err) {
         console.error("Error loading profile:", err);
+        setError(err.message || 'Something went wrong loading your profile.');
       } finally {
         setLoading(false);
       }
@@ -90,7 +96,36 @@ const Profile = () => {
     return <div className="p-20 text-center animate-pulse text-white">Loading your profile...</div>;
   }
 
-  if (!userProfile) return null;
+  if (!userProfile) {
+    return (
+      <div className="pb-20 max-w-6xl mx-auto mt-4">
+        <div className="glass-panel rounded-3xl p-12 text-center">
+          <UserIcon className="w-16 h-16 text-gray-500 mx-auto mb-4 opacity-50" />
+          <h2 className="text-2xl font-bold text-white mb-3">Unable to Load Profile</h2>
+          <p className="text-gray-400 mb-6 max-w-md mx-auto">
+            {error || 'We couldn\'t load your profile. Your session may have expired.'}
+          </p>
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-[var(--color-electric-cyan)] text-black font-bold rounded-xl hover:opacity-90 transition-all"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => {
+                handleLogout();
+                navigate('/');
+              }}
+              className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all"
+            >
+              Login Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-20 max-w-6xl mx-auto mt-4">
