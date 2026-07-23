@@ -175,7 +175,19 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, showToast }) => {
         <div className="mb-6 flex flex-col items-center justify-center">
           <button
             type="button"
-            onClick={() => googleLoginTrigger()}
+            onClick={async () => {
+              try {
+                const res = await fetch(`${API_URL}/auth/google/url`);
+                const data = await res.json();
+                if (res.ok && data.url) {
+                  window.location.href = data.url;
+                } else {
+                  googleLoginTrigger();
+                }
+              } catch (e) {
+                googleLoginTrigger();
+              }
+            }}
             className="w-full py-3 px-4 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-all border border-white/10 flex items-center justify-center gap-3 cursor-pointer shadow-md"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">

@@ -69,7 +69,109 @@ exports.loginUser = async (req, res) => {
   }
 };
 
-// Google OAuth Login
+// Helper to get OAuth2 Client
+const getOAuth2Client = () => {
+  const { OAuth2Client } = require("google-auth-library");
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  
+  // Construct redirect URI based on backend URL or environment
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:5000";
+  const redirectUri = `${backendUrl.replace(/\/+$/, '')}/api/auth/google/callback`;
+
+  return new OAuth2Client(googleClientId, googleClientSecret, redirectUri);
+};
+
+// 1. Get Google OAuth Redirect URL
+exports.getGoogleAuthUrl = (req, res) => {
+  try {
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    if (!googleClientId) {
+      return res.status(500).json({ message: "GOOGLE_CLIENT_ID is not configured on server" });
+    }
+
+    const oAuth2Client = getOAuth2Client();
+    const authorizeUrl = oAuth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: [
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email',
+      ],
+      prompt: 'select_account'
+    });
+
+    res.json({ url: authorizeUrl });
+  } catch (error) {
+    console.error("Error generating Google Auth URL:", error);
+    res.status(500).json({ message: "Failed to generate Google Auth URL", error: error.message });
+  }
+};
+
+// 2. Handle Google OAuth Callback (Redirected back from Google)
+exports.handleGoogleCallback = async (req, res) => {
+  const { code } = req.query;
+  const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+
+  if (!code) {
+    return res.redirect(`${clientUrl}?auth_error=No authorization code provided`);
+  }
+
+  try {
+    const oAuth2Client = getOAuth2Client();
+    const { tokens } = await oAuth2Client.getToken(code);
+    oAuth2Client.setCredentials(tokens);
+
+    // Fetch user profile using access token
+    const userinfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${tokens.access_token}` }
+    });
+    
+    if (!userinfoRes.ok) {
+      throw new Error("Failed to fetch user profile from Google");
+    }
+
+    const payload = await userinfoRes.json();
+    const { email, name, picture } = payload;
+
+    if (!email) {
+      return res.redirect(`${clientUrl}?auth_error=Email not provided by Google account`);
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+      user = await User.create({
+        username: name || email.split("@")[0],
+        email,
+        password: hashedPassword,
+        profilePic: picture || null,
+      });
+    } else if (!user.profilePic && picture) {
+      user.profilePic = picture;
+      await user.save();
+    }
+
+    const token = generateToken(user._id);
+    const userObj = encodeURIComponent(JSON.stringify({
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      profilePic: user.profilePic || null
+    }));
+
+    // Redirect to frontend with auth payload
+    res.redirect(`${clientUrl}?auth_token=${token}&auth_user=${userObj}`);
+  } catch (error) {
+    console.error("Google Auth Callback Error:", error);
+    res.redirect(`${clientUrl}?auth_error=${encodeURIComponent(error.message || "Google Authentication failed")}`);
+  }
+};
+
+// Legacy/Pop-up API Google OAuth Login
 exports.googleLogin = async (req, res) => {
   const { credential, email: bodyEmail, name: bodyName, picture: bodyPicture } = req.body;
 
@@ -134,7 +236,6 @@ exports.googleLogin = async (req, res) => {
 };
 
 // Logout User 
-//logout will happen from frontend 
 exports.logoutUser = (req, res) => {
   res.status(200).json({ message: "Logged out successfully. Client should delete the token." });
 };

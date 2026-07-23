@@ -52,6 +52,31 @@ const Layout = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    // Check if returning from Google OAuth Server Redirect
+    const params = new URLSearchParams(window.location.search);
+    const authToken = params.get('auth_token');
+    const authUserRaw = params.get('auth_user');
+    const authError = params.get('auth_error');
+
+    if (authToken && authUserRaw) {
+      try {
+        const authUser = JSON.parse(decodeURIComponent(authUserRaw));
+        localStorage.setItem('token', authToken);
+        localStorage.setItem('user', JSON.stringify(authUser));
+        setToken(authToken);
+        setUser(authUser);
+        window.dispatchEvent(new Event('auth-change'));
+        if (showToast) showToast(`Welcome, ${authUser.username}! 🚀`, 'success');
+        // Clean up URL query parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (err) {
+        console.error("Error parsing auth callback params:", err);
+      }
+    } else if (authError) {
+      if (showToast) showToast(decodeURIComponent(authError), 'error');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     const handleStorageChange = () => {
       setToken(localStorage.getItem('token'));
       const saved = localStorage.getItem('user');
@@ -63,7 +88,7 @@ const Layout = () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('auth-change', handleStorageChange);
     };
-  }, []);
+  }, [showToast]);
 
   const handleAuthSuccess = (data) => {
     setToken(data.token);
