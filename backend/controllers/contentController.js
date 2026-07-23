@@ -1,4 +1,5 @@
 const Content = require("../models/Content");
+const Review = require("../models/Review");
 const { getCache, setCache, delCache } = require("../redisClient");
 
 // --- Helper Functions for API calls ---
@@ -211,7 +212,28 @@ exports.searchContent = async (req, res) => {
       console.error("Jikan Search Error:", err.message);
     }
 
-    const results = [...formattedTmdb, ...formattedJikan];
+    let results = [...formattedTmdb, ...formattedJikan];
+
+    // Fallback: search local DB if external APIs returned nothing
+    if (results.length === 0) {
+      try {
+        const regex = new RegExp(q, 'i');
+        const localResults = await Content.find({ title: regex })
+          .sort({ rating: -1 })
+          .limit(20)
+          .lean();
+        results = localResults.map(item => ({
+          source: item.source,
+          externalId: item.externalId,
+          type: item.type,
+          title: item.title,
+          poster: item.poster,
+          rating: item.rating || 0,
+        }));
+      } catch (dbErr) {
+        console.error("Local DB search fallback error:", dbErr.message);
+      }
+    }
 
     // Cache search results for 5 minutes
     if (results.length > 0) {

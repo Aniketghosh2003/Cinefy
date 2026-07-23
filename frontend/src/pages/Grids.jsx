@@ -9,6 +9,7 @@ const Grids = () => {
   const [grids, setGrids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all' or 'mine'
+  const [likedGridIds, setLikedGridIds] = useState(new Set());
 
   // Create Grid Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -42,9 +43,88 @@ const Grids = () => {
     }
   };
 
+  // Fetch user's liked grids
+  const fetchUserLikes = async () => {
+    if (!token) {
+      setLikedGridIds(new Set());
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/grids/my-likes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const ids = await res.json();
+        setLikedGridIds(new Set(ids));
+      }
+    } catch (error) {
+      console.error("Error fetching liked grids:", error);
+    }
+  };
+
   useEffect(() => {
     fetchGrids();
   }, [activeTab, token]);
+
+  useEffect(() => {
+    fetchUserLikes();
+  }, [token]);
+
+  // Toggle like on a grid with optimistic UI
+  const handleToggleLike = async (gridId) => {
+    if (!token) {
+      triggerLogin();
+      return;
+    }
+
+    const isLiked = likedGridIds.has(gridId);
+
+    // Optimistic update
+    setLikedGridIds(prev => {
+      const next = new Set(prev);
+      if (isLiked) {
+        next.delete(gridId);
+      } else {
+        next.add(gridId);
+      }
+      return next;
+    });
+
+    setGrids(prev => prev.map(g => {
+      if (g._id === gridId) {
+        return { ...g, likesCount: (g.likesCount || 0) + (isLiked ? -1 : 1) };
+      }
+      return g;
+    }));
+
+    try {
+      const res = await fetch(`${API_URL}/grids/${gridId}/like`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        throw new Error('Like toggle failed');
+      }
+    } catch (error) {
+      console.error("Like toggle error:", error);
+      // Revert optimistic update on failure
+      setLikedGridIds(prev => {
+        const next = new Set(prev);
+        if (isLiked) {
+          next.add(gridId);
+        } else {
+          next.delete(gridId);
+        }
+        return next;
+      });
+      setGrids(prev => prev.map(g => {
+        if (g._id === gridId) {
+          return { ...g, likesCount: (g.likesCount || 0) + (isLiked ? 1 : -1) };
+        }
+        return g;
+      }));
+    }
+  };
 
   // Search for content to add to grid
   const handleSearch = async (query) => {
@@ -219,9 +299,18 @@ const Grids = () => {
                   <h3 className="font-bold text-white truncate">{grid.title || grid.name}</h3>
                   <p className="text-xs text-[var(--color-text-secondary)]">by {grid.userId?.username || grid.user?.username || 'Anonymous'}</p>
                 </div>
-                <div className="flex items-center gap-1 text-[var(--color-neon-pink)] bg-white/5 px-2 py-1 rounded text-xs font-bold">
-                  <Heart className="w-3 h-3 fill-[var(--color-neon-pink)]" /> {grid.likesCount || grid.likes?.length || 0}
-                </div>
+                {/* Interactive Like Button */}
+                <button
+                  onClick={() => handleToggleLike(grid._id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer border ${
+                    likedGridIds.has(grid._id)
+                      ? 'bg-[var(--color-neon-pink)]/20 text-[var(--color-neon-pink)] border-[var(--color-neon-pink)]/40 shadow-[0_0_12px_rgba(255,42,95,0.25)]'
+                      : 'bg-white/5 text-gray-400 border-white/10 hover:text-[var(--color-neon-pink)] hover:border-[var(--color-neon-pink)]/30 hover:bg-[var(--color-neon-pink)]/10'
+                  }`}
+                >
+                  <Heart className={`w-3.5 h-3.5 transition-all duration-300 ${likedGridIds.has(grid._id) ? 'fill-[var(--color-neon-pink)] scale-110' : ''}`} />
+                  <span>{grid.likesCount || 0}</span>
+                </button>
               </div>
               
               {/* 3x3 Grid Layout */}

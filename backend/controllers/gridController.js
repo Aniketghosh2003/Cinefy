@@ -49,6 +49,17 @@ exports.getMyGrids = async (req, res) => {
   }
 };
 
+// Get user's liked grid IDs
+exports.getUserLikes = async (req, res) => {
+  try {
+    const likes = await Like.find({ userId: req.user.id, targetType: "grid" }).select("targetId").lean();
+    const likedIds = likes.map(l => l.targetId.toString());
+    res.status(200).json(likedIds);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
 // Toggle Like on Grid
 exports.toggleLike = async (req, res) => {
   try {
