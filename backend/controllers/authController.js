@@ -62,10 +62,66 @@ exports.loginUser = async (req, res) => {
         token: generateToken(user._id),
       });
     } else {
-      res.status(400).json({ message: "Invalid credentials" });
+      res.status(401).json({ message: "Invalid email or password" });
     }
   } catch (error) {
     res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// Google OAuth Login
+exports.googleLogin = async (req, res) => {
+  const { OAuth2Client } = require("google-auth-library");
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+
+  if (!googleClientId) {
+    return res.status(500).json({ message: "GOOGLE_CLIENT_ID is not configured on server" });
+  }
+
+  const client = new OAuth2Client(googleClientId);
+  const { credential } = req.body;
+
+  if (!credential) {
+    return res.status(400).json({ message: "Missing Google credential token" });
+  }
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: googleClientId,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+      user = await User.create({
+        username: name || email.split("@")[0],
+        email,
+        password: hashedPassword,
+        profilePic: picture || null,
+      });
+    } else if (!user.profilePic && picture) {
+      user.profilePic = picture;
+      await user.save();
+    }
+
+    res.json({
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      profilePic: user.profilePic || null,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    console.error("Google Auth Verification Error:", error);
+    res.status(400).json({ message: "Google Authentication failed", error: error.message });
   }
 };
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Lock, Mail, User } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 
 import API_URL from '../api';
 
@@ -12,6 +13,39 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, showToast }) => {
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: credentialResponse.credential }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Google Login failed');
+      }
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify({
+        _id: data._id,
+        username: data.username,
+        email: data.email,
+        profilePic: data.profilePic || null
+      }));
+
+      if (onAuthSuccess) onAuthSuccess(data);
+      if (showToast) showToast(`Welcome, ${data.username}! 🚀`, 'success');
+      onClose();
+    } catch (err) {
+      console.error("Google Auth Error:", err);
+      setError(err.message || 'Google authentication failed');
+      if (showToast) showToast(err.message || 'Google Login Failed', 'error');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,13 +100,13 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, showToast }) => {
         {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 p-2.5 rounded-full bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all border border-white/5"
+          className="absolute top-4 right-4 p-2.5 rounded-full bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all border border-white/5 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h2 className="text-3xl font-black text-white tracking-wide mb-2 text-gradient">
             {isLogin ? 'WELCOME BACK' : 'JOIN CINEFY'}
           </h2>
@@ -87,6 +121,26 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, showToast }) => {
             {error}
           </div>
         )}
+
+        {/* Google OAuth Login */}
+        <div className="mb-6 flex flex-col items-center justify-center">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => {
+              setError('Google Authentication Failed');
+              if (showToast) showToast('Google Authentication Failed', 'error');
+            }}
+            theme="filled_black"
+            shape="pill"
+            text={isLogin ? "signin_with" : "signup_with"}
+          />
+          <div className="relative w-full flex items-center justify-center mt-6">
+            <div className="border-t border-white/10 w-full" />
+            <span className="bg-[#171a21] px-3 text-xs uppercase tracking-widest text-gray-500 font-bold shrink-0">
+              Or with email
+            </span>
+          </div>
+        </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -132,14 +186,14 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, showToast }) => {
           <button 
             type="submit"
             disabled={loading}
-            className="w-full py-4 rounded-xl bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] font-black text-lg transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(212,165,116,0.3)] disabled:opacity-50 mt-6"
+            className="w-full py-4 rounded-xl bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] font-black text-lg transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(212,165,116,0.3)] disabled:opacity-50 mt-6 cursor-pointer"
           >
             {loading ? 'Please wait...' : isLogin ? 'SIGN IN' : 'CREATE ACCOUNT'}
           </button>
         </form>
 
         {/* Toggle Mode */}
-        <div className="mt-8 text-center text-sm font-semibold">
+        <div className="mt-6 text-center text-sm font-semibold">
           <span className="text-gray-500">
             {isLogin ? "Don't have an account? " : 'Already have an account? '}
           </span>
@@ -148,7 +202,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, showToast }) => {
               setIsLogin(!isLogin);
               setError('');
             }}
-            className="text-[var(--color-accent)] hover:underline ml-1"
+            className="text-[var(--color-accent)] hover:underline ml-1 cursor-pointer"
           >
             {isLogin ? 'Sign Up' : 'Log In'}
           </button>
