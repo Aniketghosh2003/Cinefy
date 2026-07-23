@@ -5,7 +5,7 @@ import { Grid as GridIcon, Plus, Heart, X, Search, Trash2 } from 'lucide-react';
 const API_URL = 'http://localhost:5000/api';
 
 const Grids = () => {
-  const { token, triggerLogin } = useOutletContext();
+  const { token, triggerLogin, showToast } = useOutletContext();
   const [grids, setGrids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all' or 'mine'
@@ -104,6 +104,9 @@ const Grids = () => {
       });
       if (!res.ok) {
         throw new Error('Like toggle failed');
+      }
+      if (showToast) {
+        showToast(isLiked ? 'Removed like' : 'Liked! ❤️', isLiked ? 'info' : 'success');
       }
     } catch (error) {
       console.error("Like toggle error:", error);
@@ -225,6 +228,7 @@ const Grids = () => {
       setSearchResults([]);
       // Refresh grids
       fetchGrids();
+      if (showToast) showToast('Grid published! 🎬', 'success');
     } catch (err) {
       setCreateError(err.message);
     } finally {

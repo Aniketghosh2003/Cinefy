@@ -24,7 +24,7 @@ const Recommendations = () => {
     try {
       setLoading(true);
       setHasSearched(true);
-      
+
       const params = new URLSearchParams();
       if (filters.type) params.append('type', filters.type);
       if (filters.genre) params.append('genre', filters.genre);
@@ -67,7 +67,7 @@ const Recommendations = () => {
 
   return (
     <div className="pb-10 flex flex-col lg:flex-row gap-8">
-      
+
       {/* Smart Filters Sidebar / Form */}
       <div className="w-full lg:w-80 flex-shrink-0">
         <form onSubmit={handleSearchSubmit} className="glass-panel p-6 rounded-3xl sticky top-24 border border-white/10 space-y-6">
@@ -76,7 +76,7 @@ const Recommendations = () => {
               <SlidersHorizontal className="w-5 h-5 text-[var(--color-neon-pink)]" />
               Smart Filters
             </h2>
-            { (filters.genre || filters.mood || filters.query || filters.type) && (
+            {(filters.genre || filters.mood || filters.query || filters.type) && (
               <button
                 type="button"
                 onClick={() => setFilters({ type: '', genre: '', mood: '', query: '', minRating: 6.5 })}
@@ -86,14 +86,14 @@ const Recommendations = () => {
               </button>
             )}
           </div>
-          
+
           {/* Content Type */}
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Content Type</label>
-            <select 
-              name="type" 
-              onChange={handleFilterChange} 
-              value={filters.type} 
+            <select
+              name="type"
+              onChange={handleFilterChange}
+              value={filters.type}
               className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-[var(--color-electric-cyan)] text-sm font-semibold cursor-pointer"
             >
               <option value="">All Types (Movies, Series, Anime)</option>
@@ -109,13 +109,13 @@ const Recommendations = () => {
               <MessageSquare className="w-3.5 h-3.5 text-[var(--color-electric-cyan)]" />
               Keyword or Review Vibe
             </label>
-            <input 
-              type="text" 
-              name="query" 
-              onChange={handleFilterChange} 
-              value={filters.query} 
-              placeholder="e.g. time travel, twist ending..." 
-              className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-electric-cyan)] text-sm font-semibold" 
+            <input
+              type="text"
+              name="query"
+              onChange={handleFilterChange}
+              value={filters.query}
+              placeholder="e.g. time travel, twist ending..."
+              className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-electric-cyan)] text-sm font-semibold"
             />
           </div>
 
@@ -131,11 +131,10 @@ const Recommendations = () => {
                   key={g}
                   type="button"
                   onClick={() => handleGenreChipClick(g)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    filters.genre === g 
-                      ? 'bg-[var(--color-anime-purple)] text-white border border-[var(--color-anime-purple)]' 
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filters.genre === g
+                      ? 'bg-[var(--color-anime-purple)] text-white border border-[var(--color-anime-purple)]'
                       : 'bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10 hover:text-white'
-                  }`}
+                    }`}
                 >
                   {g}
                 </button>
@@ -147,7 +146,7 @@ const Recommendations = () => {
           <div>
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[var(--color-neon-pink)]" />
-              Grok AI Mood / Vibe
+              AI Mood / Vibe
             </label>
             <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto hide-scrollbar">
               {POPULAR_MOODS.map(m => (
@@ -155,11 +154,10 @@ const Recommendations = () => {
                   key={m}
                   type="button"
                   onClick={() => handleMoodChipClick(m)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    filters.mood === m 
-                      ? 'bg-[var(--color-neon-pink)] text-white border border-[var(--color-neon-pink)]' 
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filters.mood === m
+                      ? 'bg-[var(--color-neon-pink)] text-white border border-[var(--color-neon-pink)]'
                       : 'bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10 hover:text-white'
-                  }`}
+                    }`}
                 >
                   {m}
                 </button>
@@ -173,15 +171,15 @@ const Recommendations = () => {
               <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Min Rating</label>
               <span className="text-sm font-black text-yellow-400">★ {filters.minRating}</span>
             </div>
-            <input 
-              type="range" 
-              name="minRating" 
-              min="0" 
-              max="10" 
-              step="0.5" 
-              onChange={handleFilterChange} 
-              value={filters.minRating} 
-              className="w-full accent-[var(--color-electric-cyan)] cursor-pointer" 
+            <input
+              type="range"
+              name="minRating"
+              min="0"
+              max="10"
+              step="0.5"
+              onChange={handleFilterChange}
+              value={filters.minRating}
+              className="w-full accent-[var(--color-electric-cyan)] cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-gray-500 font-semibold px-1 mt-1">
               <span>Any (0)</span>
@@ -214,7 +212,7 @@ const Recommendations = () => {
           <div>
             <h1 className="text-3xl font-black text-white flex items-center gap-3">
               <Sparkles className="w-8 h-8 text-[var(--color-electric-cyan)] animate-pulse" />
-              Grok AI Recommendations
+              AI Recommendations
             </h1>
             <p className="text-sm text-gray-400 mt-1">
               {hasSearched ? `Found ${data.length} tailored recommendations for you` : 'Adjust filters and click Find Recommendations'}
@@ -242,7 +240,7 @@ const Recommendations = () => {
                   ) : (
                     <div className="w-full h-full bg-[var(--color-surface)] flex items-center justify-center text-xs text-gray-500">No Image</div>
                   )}
-                  
+
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Play className="w-10 h-10 text-white fill-white/80" />
                   </div>
@@ -260,7 +258,7 @@ const Recommendations = () => {
                 <h3 className="font-bold text-sm text-white line-clamp-1 group-hover:text-[var(--color-electric-cyan)] transition-colors">
                   {item.title}
                 </h3>
-                
+
                 <div className="flex items-center justify-between text-[11px] font-semibold text-gray-400 mt-1">
                   <span className="uppercase text-[10px] tracking-wider bg-white/5 px-2 py-0.5 rounded border border-white/5">
                     {item.type}

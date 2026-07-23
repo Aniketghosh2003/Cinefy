@@ -7,7 +7,7 @@ const API_URL = 'http://localhost:5000/api';
 const CollectionDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, triggerLogin } = useOutletContext();
+  const { token, triggerLogin, showToast } = useOutletContext();
 
   const [collection, setCollection] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -58,9 +58,11 @@ const CollectionDetails = () => {
         if (data.message === "Liked collection") {
           setIsLiked(true);
           setLikesCount(prev => prev + 1);
+          if (showToast) showToast('Liked collection! ❤️', 'success');
         } else {
           setIsLiked(false);
           setLikesCount(prev => Math.max(0, prev - 1));
+          if (showToast) showToast('Unliked collection', 'info');
         }
       }
     } catch (err) {

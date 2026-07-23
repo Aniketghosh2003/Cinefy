@@ -15,8 +15,8 @@ const ContentDetails = () => {
   const { source, id } = useParams();
   const location = useLocation();
   const contentType = new URLSearchParams(location.search).get('type');
-  
-  const { token, user, triggerLogin } = useOutletContext();
+
+  const { token, user, triggerLogin, showToast } = useOutletContext();
 
   const [content, setContent] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -185,6 +185,9 @@ const ContentDetails = () => {
           const hasWatchLater = (profile.watchLater || []).some(w => (w._id || w) === content._id);
           setIsWatched(hasWatched);
           setIsWatchLater(hasWatchLater);
+          if (showToast) {
+            showToast(hasWatched ? 'Marked as Watched! 🍿' : 'Removed from Watched', hasWatched ? 'success' : 'info');
+          }
         }
       } else {
         const errData = await res.json();
@@ -224,6 +227,9 @@ const ContentDetails = () => {
           const hasWatchLater = (profile.watchLater || []).some(w => (w._id || w) === content._id);
           setIsWatched(hasWatched);
           setIsWatchLater(hasWatchLater);
+          if (showToast) {
+            showToast(hasWatchLater ? 'Added to Watch Later! 📌' : 'Removed from Watch Later', hasWatchLater ? 'success' : 'info');
+          }
         }
       } else {
         const errData = await res.json();
@@ -363,7 +369,7 @@ const ContentDetails = () => {
 
   if (!content) return <div className="p-20 text-center text-white">Content not found.</div>;
 
-  const embedUrl = videoId 
+  const embedUrl = videoId
     ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0&rel=0`
     : content.trailer;
 
@@ -372,8 +378,8 @@ const ContentDetails = () => {
       {/* 1. TOP SECTION: Trailer & Poster */}
       <div className="relative w-full h-[420px] md:h-[500px] rounded-3xl overflow-hidden mb-10 glass-panel neon-border">
         {content.trailer && isPlayingBackground ? (
-          <iframe 
-            src={embedUrl} 
+          <iframe
+            src={embedUrl}
             className="absolute inset-0 w-full h-full object-cover opacity-40 z-0 pointer-events-none"
             frameBorder="0"
             allow="autoplay; encrypted-media"
@@ -384,9 +390,9 @@ const ContentDetails = () => {
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-void)] to-[var(--color-anime-purple)]/20" />
         )}
-        
+
         {content.trailer && (
-          <button 
+          <button
             onClick={() => setIsPlayingBackground(!isPlayingBackground)}
             className="absolute top-6 right-6 z-30 p-3 rounded-full bg-black/60 hover:bg-white hover:text-black text-white transition-all pointer-events-auto border border-white/10 flex items-center justify-center shadow-lg"
             title={isPlayingBackground ? "Pause Background Preview" : "Play Background Preview"}
@@ -394,20 +400,20 @@ const ContentDetails = () => {
             {isPlayingBackground ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
           </button>
         )}
-        
+
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-void)] via-[var(--color-void)]/60 to-transparent z-10 pointer-events-none" />
-        
-        <div className="absolute bottom-0 left-0 w-full p-8 md:p-12 z-20 flex flex-col md:flex-row gap-8 items-end pointer-events-none">
-          {/* Poster */}
-          <div className="w-28 md:w-36 flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 hidden sm:block pointer-events-auto">
-            {content.poster ? <img src={content.poster} alt={content.title} className="w-full h-auto" /> : <div className="w-full aspect-[2/3] bg-gray-800"></div>}
+
+        <div className="absolute bottom-0 left-0 w-full p-4 sm:p-8 md:p-12 z-20 flex flex-col md:flex-row gap-4 md:gap-8 items-start md:items-end pointer-events-none">
+          {/* Poster - Hidden on mobile screens */}
+          <div className="hidden sm:block w-28 md:w-36 flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 pointer-events-auto">
+            {content.poster ? <img src={content.poster} alt={content.title} className="w-full h-auto object-cover" /> : <div className="w-full aspect-[2/3] bg-gray-800"></div>}
           </div>
-          
-          {/* Title & Basic Info */}
-          <div className="flex-1 pointer-events-auto">
-            <h1 className="text-4xl md:text-6xl font-black mb-4 text-white drop-shadow-lg">{content.title}</h1>
-            <div className="flex flex-wrap items-center gap-4 text-sm font-semibold text-gray-300 mb-6">
-              {content.releaseDate && <span className="bg-white/10 px-3 py-1 rounded-full">{new Date(content.releaseDate).getFullYear()}</span>}
+
+          {/* Title & Basic Info - Left aligned */}
+          <div className="flex-1 text-left pointer-events-auto w-full">
+            <h1 className="text-2xl sm:text-4xl md:text-6xl font-black mb-2 sm:mb-4 text-white drop-shadow-lg text-left">{content.title}</h1>
+            <div className="flex flex-wrap items-center justify-start gap-2 sm:gap-4 text-xs sm:text-sm font-semibold text-gray-300 mb-2 sm:mb-6">
+              {content.releaseDate && <span className="bg-white/10 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full">{new Date(content.releaseDate).getFullYear()}</span>}
               {content.ageRating && <span className="border border-gray-500 px-2 py-0.5 rounded text-gray-400">{content.ageRating}</span>}
               {content.country && <span>{content.country}</span>}
               {content.language && content.language.length > 0 && <span>{content.language[0]}</span>}
@@ -418,40 +424,48 @@ const ContentDetails = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
-        
+
         {/* 2. LEFT MAIN BODY: Overview, Cast, Reviews (70%) */}
         <div className="w-full lg:w-[70%]">
           {/* Action Buttons (Mobile visible, but mainly for Layout flow) */}
           <div className="flex flex-wrap gap-4 mb-10 lg:hidden">
-             {content.trailer && (
-               <button 
-                 onClick={() => setShowTrailerModal(true)} 
-                 className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2 border border-[var(--color-neon-pink)]/30 text-white"
-               >
-                 <Play className="w-5 h-5 fill-current"/> Watch Trailer
-               </button>
-             )}
-             <button 
-               onClick={handleToggleWatched}
-               className={`flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-green-500 hover:text-white font-bold transition-colors flex items-center justify-center gap-2 ${isWatched ? 'bg-green-500 text-white border border-green-500' : 'text-white'}`}
-             >
-               <CheckCircle className="w-5 h-5"/> Watched
-             </button>
-             <button 
-               onClick={handleToggleWatchLater}
-               className={`flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2 ${isWatchLater ? 'bg-[var(--color-neon-pink)] text-white border border-[var(--color-neon-pink)]' : 'text-white'}`}
-             >
-               <Bookmark className="w-5 h-5"/> Watch Later
-             </button>
-             <button 
-               onClick={() => {
-                 if (!token) triggerLogin();
-                 else setShowCollectionModal(true);
-               }}
-               className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-anime-purple)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2 text-white"
-             >
-               <Plus className="w-5 h-5"/> Collection
-             </button>
+            {content.trailer && (
+              <button
+                onClick={() => setShowTrailerModal(true)}
+                className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2 border border-[var(--color-neon-pink)]/30 text-white"
+              >
+                <Play className="w-5 h-5 fill-current" /> Watch Trailer
+              </button>
+            )}
+            <button
+              onClick={handleToggleWatched}
+              className={`flex-1 glass-panel px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                isWatched 
+                  ? 'bg-emerald-400/90 text-black border border-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.5)]' 
+                  : 'text-white hover:bg-emerald-500/20 hover:text-emerald-300'
+              }`}
+            >
+              <CheckCircle className="w-5 h-5" /> {isWatched ? 'Watched ✓' : 'Mark as Watched'}
+            </button>
+            <button
+              onClick={handleToggleWatchLater}
+              className={`flex-1 glass-panel px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                isWatchLater 
+                  ? 'bg-emerald-400/90 text-black border border-emerald-300 shadow-[0_0_15px_rgba(52,211,153,0.5)]' 
+                  : 'text-white hover:bg-[var(--color-neon-pink)]'
+              }`}
+            >
+              <Bookmark className="w-5 h-5" /> {isWatchLater ? 'In Watch Later' : 'Watch Later'}
+            </button>
+            <button
+              onClick={() => {
+                if (!token) triggerLogin();
+                else setShowCollectionModal(true);
+              }}
+              className="flex-1 glass-panel px-4 py-3 rounded-xl hover:bg-[var(--color-anime-purple)] hover:text-white font-bold transition-colors flex items-center justify-center gap-2 text-white"
+            >
+              <Plus className="w-5 h-5" /> Collection
+            </button>
           </div>
 
           <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><span className="w-1.5 h-6 bg-[var(--color-electric-cyan)] rounded-full"></span>Synopsis</h3>
@@ -466,7 +480,7 @@ const ContentDetails = () => {
             </div>
             {content.mood && content.mood.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                <span className="text-sm text-gray-400 mr-2">Grok AI Mood:</span>
+                <span className="text-sm text-gray-400 mr-2">AI Mood:</span>
                 {content.mood.map(m => <span key={m} className="px-3 py-1 bg-[var(--color-anime-purple)]/20 text-[var(--color-anime-purple)] rounded-full text-sm font-bold border border-[var(--color-anime-purple)]/30">{m}</span>)}
               </div>
             )}
@@ -496,11 +510,11 @@ const ContentDetails = () => {
                 <MessageSquare className="w-8 h-8 text-[var(--color-neon-pink)]" />
                 Community Reviews
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   if (!token) triggerLogin();
                   else setShowReviewModal(true);
-                }} 
+                }}
                 className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-bold transition-colors cursor-pointer text-white"
               >
                 Write Review
@@ -534,7 +548,7 @@ const ContentDetails = () => {
             ) : (
               <div className="text-center p-10 glass-panel rounded-2xl">
                 <p className="text-gray-400 mb-4">No reviews yet.</p>
-                <button 
+                <button
                   onClick={() => {
                     if (!token) triggerLogin();
                     else setShowReviewModal(true);
@@ -550,48 +564,56 @@ const ContentDetails = () => {
 
         {/* 3. RIGHT SIDEBAR: Actions & Platforms */}
         <div className="w-full lg:w-[30%] flex-shrink-0 flex flex-col gap-6">
-          
+
           {/* Action Buttons (Desktop) */}
           <div className="hidden lg:flex flex-col gap-3 sticky top-24">
-             {content.trailer && (
-               <button 
-                 onClick={() => setShowTrailerModal(true)} 
-                 className="w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-black transition-colors flex items-center justify-center gap-3 text-lg border border-[var(--color-neon-pink)]/30 text-white"
-               >
-                 <Play className="w-6 h-6 fill-current"/> Watch Trailer
-               </button>
-             )}
-             <button 
-               onClick={handleToggleWatched}
-               className={`w-full glass-panel px-6 py-4 rounded-xl hover:bg-green-500 hover:text-white font-black transition-all flex items-center justify-center gap-3 text-lg ${isWatched ? 'bg-green-500 text-white border border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'text-white'}`}
-             >
-               <CheckCircle className="w-6 h-6"/> {isWatched ? 'Watched ✓' : 'Mark as Watched'}
-             </button>
-             <button 
-               onClick={handleToggleWatchLater}
-               className={`w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-black transition-all flex items-center justify-center gap-3 text-lg ${isWatchLater ? 'bg-[var(--color-neon-pink)] text-white border border-[var(--color-neon-pink)]' : 'text-white'}`}
-             >
-               <Bookmark className="w-6 h-6"/> {isWatchLater ? 'In Watch Later' : 'Watch Later'}
-             </button>
-             <button 
-               onClick={() => {
-                 if (!token) triggerLogin();
-                 else setShowCollectionModal(true);
-               }}
-               className="w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-anime-purple)] hover:text-white font-black transition-colors flex items-center justify-center gap-3 text-lg text-white"
-             >
-               <Plus className="w-6 h-6"/> Add to Collection
-             </button>
-             
-             {/* Streaming Platforms */}
-             {content.platforms && content.platforms.length > 0 && (
-               <div className="mt-8 p-6 glass-panel rounded-2xl neon-border border-[var(--color-anime-purple)]">
-                 <h4 className="font-bold mb-4 flex items-center gap-2"><Tv className="w-5 h-5 text-[var(--color-anime-purple)]"/> Available On</h4>
-                 <div className="flex flex-wrap gap-2">
-                   {content.platforms.map(p => <span key={p} className="px-3 py-1 bg-white/10 rounded text-sm font-semibold">{p}</span>)}
-                 </div>
-               </div>
-             )}
+            {content.trailer && (
+              <button
+                onClick={() => setShowTrailerModal(true)}
+                className="w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-neon-pink)] hover:text-white font-black transition-colors flex items-center justify-center gap-3 text-lg border border-[var(--color-neon-pink)]/30 text-white"
+              >
+                <Play className="w-6 h-6 fill-current" /> Watch Trailer
+              </button>
+            )}
+            <button
+              onClick={handleToggleWatched}
+              className={`w-full glass-panel px-6 py-4 rounded-xl font-black transition-all flex items-center justify-center gap-3 text-lg cursor-pointer ${
+                isWatched 
+                  ? 'bg-emerald-400/90 text-black border border-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.5)]' 
+                  : 'text-white hover:bg-emerald-500/20 hover:text-emerald-300'
+              }`}
+            >
+              <CheckCircle className="w-6 h-6" /> {isWatched ? 'Watched ✓' : 'Mark as Watched'}
+            </button>
+            <button
+              onClick={handleToggleWatchLater}
+              className={`w-full glass-panel px-6 py-4 rounded-xl font-black transition-all flex items-center justify-center gap-3 text-lg cursor-pointer ${
+                isWatchLater 
+                  ? 'bg-emerald-400/90 text-black border border-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.5)]' 
+                  : 'text-white hover:bg-[var(--color-neon-pink)]'
+              }`}
+            >
+              <Bookmark className="w-6 h-6" /> {isWatchLater ? 'In Watch Later' : 'Watch Later'}
+            </button>
+            <button
+              onClick={() => {
+                if (!token) triggerLogin();
+                else setShowCollectionModal(true);
+              }}
+              className="w-full glass-panel px-6 py-4 rounded-xl hover:bg-[var(--color-anime-purple)] hover:text-white font-black transition-colors flex items-center justify-center gap-3 text-lg text-white"
+            >
+              <Plus className="w-6 h-6" /> Add to Collection
+            </button>
+
+            {/* Streaming Platforms */}
+            {content.platforms && content.platforms.length > 0 && (
+              <div className="mt-8 p-6 glass-panel rounded-2xl neon-border border-[var(--color-anime-purple)]">
+                <h4 className="font-bold mb-4 flex items-center gap-2"><Tv className="w-5 h-5 text-[var(--color-anime-purple)]" /> Available On</h4>
+                <div className="flex flex-wrap gap-2">
+                  {content.platforms.map(p => <span key={p} className="px-3 py-1 bg-white/10 rounded text-sm font-semibold">{p}</span>)}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -602,7 +624,7 @@ const ContentDetails = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
           <div className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black">
             {/* Close Button */}
-            <button 
+            <button
               onClick={() => {
                 setShowTrailerModal(false);
                 setIsModalVideoPlaying(true);
@@ -612,13 +634,13 @@ const ContentDetails = () => {
             >
               <X className="w-5 h-5" />
             </button>
-            
+
             {/* The YouTube Player element */}
             <div id="modal-player" className="w-full h-full"></div>
 
             {/* Custom Overlay to block "More Videos" on pause/end */}
             {!isModalVideoPlaying && (
-              <div 
+              <div
                 onClick={() => {
                   if (player && player.playVideo) {
                     player.playVideo();
@@ -647,7 +669,7 @@ const ContentDetails = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="relative w-full max-w-lg glass-panel rounded-3xl overflow-hidden shadow-2xl p-8 border border-white/10 animate-in fade-in zoom-in-95 duration-200">
             {/* Close Button */}
-            <button 
+            <button
               onClick={() => setShowReviewModal(false)}
               className="absolute top-4 right-4 p-2.5 rounded-full bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all border border-white/5 cursor-pointer animate-none"
             >
@@ -670,11 +692,11 @@ const ContentDetails = () => {
               {/* Worth Score Selector */}
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Worth Score ({worthScore}/10)</label>
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="10" 
-                  value={worthScore} 
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={worthScore}
                   onChange={(e) => setWorthScore(Number(e.target.value))}
                   className="w-full accent-[var(--color-accent)]"
                 />
@@ -700,7 +722,7 @@ const ContentDetails = () => {
                     }
 
                     return (
-                      <button 
+                      <button
                         key={item}
                         type="button"
                         onClick={() => setCenifyMeter(item)}
@@ -716,7 +738,7 @@ const ContentDetails = () => {
               {/* Review Comment */}
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Review Comment</label>
-                <textarea 
+                <textarea
                   required
                   rows="4"
                   placeholder="Tell us what you liked or disliked about this..."
@@ -727,7 +749,7 @@ const ContentDetails = () => {
               </div>
 
               {/* Submit Button */}
-              <button 
+              <button
                 type="submit"
                 disabled={submittingReview}
                 className="w-full py-3.5 rounded-xl bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] font-black text-md transition-all flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(212,165,116,0.25)] disabled:opacity-50 mt-6 cursor-pointer"
@@ -743,9 +765,9 @@ const ContentDetails = () => {
       {showCollectionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-2xl glass-panel rounded-3xl overflow-hidden shadow-2xl p-8 border border-white/10 flex flex-col md:flex-row gap-8 max-h-[90vh]">
-            
+
             {/* Close Button */}
-            <button 
+            <button
               onClick={() => setShowCollectionModal(false)}
               className="absolute top-4 right-4 p-2.5 rounded-full bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-all border border-white/5 cursor-pointer"
             >
@@ -755,7 +777,7 @@ const ContentDetails = () => {
             {/* Left: Add to existing collection */}
             <div className="flex-1 flex flex-col min-h-0">
               <h3 className="text-xl font-black text-white mb-4 tracking-wide text-gradient">MY COLLECTIONS</h3>
-              
+
               {collectionError && (
                 <div className="mb-4 p-3 rounded-lg bg-[var(--color-crimson)]/20 border border-[var(--color-crimson)]/50 text-red-200 text-sm font-semibold text-center">
                   {collectionError}
@@ -795,7 +817,7 @@ const ContentDetails = () => {
               <h3 className="text-xl font-black text-white mb-4 tracking-wide text-gradient">NEW COLLECTION</h3>
               <form onSubmit={handleCreateCollectionAndAdd} className="space-y-4">
                 <div>
-                  <input 
+                  <input
                     type="text"
                     required
                     placeholder="Collection Name (e.g. Best Sci-Fi)"
@@ -805,7 +827,7 @@ const ContentDetails = () => {
                   />
                 </div>
                 <div>
-                  <textarea 
+                  <textarea
                     rows="3"
                     placeholder="Description (Optional)"
                     value={newCollectionDesc}

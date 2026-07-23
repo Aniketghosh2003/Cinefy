@@ -3,7 +3,7 @@ import { X, Lock, Mail, User } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
 
-const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
+const AuthModal = ({ isOpen, onClose, onAuthSuccess, showToast }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -45,6 +45,12 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
 
       // Call success callback and close modal
       if (onAuthSuccess) onAuthSuccess(data);
+      if (showToast) {
+        showToast(
+          isLogin ? `Welcome back, ${data.username}!` : `Account created! Welcome, ${data.username}!`,
+          'success'
+        );
+      }
       onClose();
     } catch (err) {
       setError(err.message);

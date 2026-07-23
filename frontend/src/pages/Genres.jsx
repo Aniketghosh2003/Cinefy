@@ -61,25 +61,24 @@ const Genres = () => {
           Explore By Genre
         </h1>
         <p className="text-[var(--color-text-secondary)]">
-          {selectedGenre 
-            ? `Showing the best in ${selectedGenre} — powered by Grok AI mood & reviews` 
+          {selectedGenre
+            ? `Showing the best in ${selectedGenre} — powered by AI mood & reviews`
             : 'Discover content grouped by your favorite categories.'}
         </p>
       </div>
 
       {/* Genre Grid */}
-      <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 transition-all duration-500 ${selectedGenre ? 'mb-10' : ''}`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 transition-all duration-500 ${selectedGenre ? 'mb-10' : ''}`}>
         {GENRES.map((genre) => (
-          <div 
+          <div
             key={genre.name}
             onClick={() => handleGenreClick(genre.name)}
-            className={`cursor-pointer rounded-2xl relative overflow-hidden group transition-all duration-300 shadow-lg ${
-              selectedGenre === genre.name 
-                ? 'h-32 ring-2 ring-[var(--color-electric-cyan)] ring-offset-2 ring-offset-[var(--color-void)] scale-[1.02]' 
-                : selectedGenre 
-                  ? 'h-24 opacity-60 hover:opacity-90' 
+            className={`cursor-pointer rounded-2xl relative overflow-hidden group transition-all duration-300 shadow-lg ${selectedGenre === genre.name
+                ? 'h-32 ring-2 ring-[var(--color-electric-cyan)] ring-offset-2 ring-offset-[var(--color-void)] scale-[1.02]'
+                : selectedGenre
+                  ? 'h-24 opacity-60 hover:opacity-90'
                   : 'h-40 hover:scale-105'
-            }`}
+              }`}
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${genre.color} opacity-80 group-hover:opacity-100 transition-opacity`} />
             <div className="absolute inset-0 bg-black/20" />
@@ -106,7 +105,7 @@ const Genres = () => {
                 Best in {selectedGenre}
               </h2>
               <p className="text-sm text-gray-400 mt-1">
-                {loading ? 'Finding the best titles...' : `${results.length} recommendations curated by Grok AI`}
+                {loading ? 'Finding the best titles...' : `${results.length} recommendations curated by AI`}
               </p>
             </div>
             <button
@@ -177,7 +176,7 @@ const Genres = () => {
                   <h3 className="font-bold text-sm text-white line-clamp-1 group-hover:text-[var(--color-electric-cyan)] transition-colors">
                     {item.title}
                   </h3>
-                  
+
                   <div className="flex items-center justify-between text-[11px] font-semibold text-gray-400 mt-1">
                     <span className="uppercase text-[10px] tracking-wider bg-white/5 px-2 py-0.5 rounded border border-white/5">
                       {item.type}

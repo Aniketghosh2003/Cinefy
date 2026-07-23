@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, Link, useNavigate } from 'react-router-dom';
-import { User as UserIcon, Edit3, MessageSquare, Grid, Library, Clock, LogOut, Heart } from 'lucide-react';
+import { User as UserIcon, Edit3, MessageSquare, Grid, Library, Clock, LogOut, Heart, Camera, Loader2 } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
 
 const Profile = () => {
-  const { token, handleLogout } = useOutletContext();
+  const { token, handleLogout, showToast } = useOutletContext();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   
   const [activeTab, setActiveTab] = useState('watchlater');
   const [isEditing, setIsEditing] = useState(false);
@@ -16,6 +17,7 @@ const Profile = () => {
   const [userReviews, setUserReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [uploadingPic, setUploadingPic] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -79,16 +81,108 @@ const Profile = () => {
           savedUser.username = updatedUser.username;
           localStorage.setItem('user', JSON.stringify(savedUser));
           window.dispatchEvent(new Event('auth-change'));
+          if (showToast) showToast('Profile updated!', 'success');
+        } else {
+          if (showToast) showToast('Failed to update profile', 'error');
         }
       } catch (error) {
         console.error("Error updating profile:", error);
+        if (showToast) showToast('Error updating profile', 'error');
       }
     }
     setIsEditing(!isEditing);
   };
 
+  // Profile image upload handler
+  const handleProfilePicChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      if (showToast) showToast('Please select an image file', 'warning');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      if (showToast) showToast('Image must be under 2MB', 'warning');
+      return;
+    }
+
+    setUploadingPic(true);
+
+    try {
+      // Convert to base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Resize image to keep payload small (max 256px wide for profile pics)
+      const resizedBase64 = await resizeImage(base64, 256);
+
+      // Send to backend
+      const res = await fetch(`${API_URL}/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ profilePic: resizedBase64 })
+      });
+
+      if (res.ok) {
+        const updatedUser = await res.json();
+        setUserProfile(prev => ({ ...prev, profilePic: updatedUser.profilePic }));
+        // Update localStorage
+        const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        savedUser.profilePic = updatedUser.profilePic;
+        localStorage.setItem('user', JSON.stringify(savedUser));
+        window.dispatchEvent(new Event('auth-change'));
+        if (showToast) showToast('Profile picture updated! 📸', 'success');
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (err) {
+      console.error("Profile pic upload error:", err);
+      if (showToast) showToast('Failed to update profile picture', 'error');
+    } finally {
+      setUploadingPic(false);
+      // Reset file input so the same file can be selected again
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Resize image using canvas
+  const resizeImage = (base64, maxWidth) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = base64;
+    });
+  };
+
   const onLogoutClick = () => {
     handleLogout();
+    if (showToast) showToast('Logged out successfully', 'info');
     navigate('/');
   };
 
@@ -136,7 +230,7 @@ const Profile = () => {
         
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
           
-          {/* Profile Picture */}
+          {/* Profile Picture with Upload Overlay */}
           <div className="relative group w-32 h-32 flex-shrink-0">
             <div className="w-full h-full rounded-full overflow-hidden border-4 border-white/10 bg-[var(--color-surface)] flex items-center justify-center shadow-[0_0_20px_rgba(138,43,226,0.3)]">
               {userProfile.profilePic ? (
@@ -145,6 +239,34 @@ const Profile = () => {
                 <UserIcon className="w-16 h-16 text-gray-500" />
               )}
             </div>
+
+            {/* Upload Overlay */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPic}
+              className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center cursor-pointer border-4 border-transparent group-hover:border-[var(--color-electric-cyan)]/50"
+            >
+              {uploadingPic ? (
+                <Loader2 className="w-8 h-8 text-white animate-spin" />
+              ) : (
+                <>
+                  <Camera className="w-6 h-6 text-white mb-1" />
+                  <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider">Change Photo</span>
+                </>
+              )}
+            </button>
+
+            {/* Hidden File Input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleProfilePicChange}
+              className="hidden"
+            />
+
+            {/* Online indicator dot */}
+            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[var(--color-surface)] shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
           </div>
 
           {/* User Info */}
@@ -157,17 +279,17 @@ const Profile = () => {
                   onChange={(e) => setUsernameInput(e.target.value)}
                   className="bg-black/50 border border-[var(--color-electric-cyan)] rounded-lg px-4 py-2 text-xl font-bold text-white focus:outline-none"
                 />
-                <button onClick={handleEditToggle} className="bg-[var(--color-electric-cyan)] text-white font-bold py-2 rounded-lg">Save Changes</button>
+                <button onClick={handleEditToggle} className="bg-[var(--color-electric-cyan)] text-white font-bold py-2 rounded-lg cursor-pointer">Save Changes</button>
               </div>
             ) : (
               <>
                 <h1 className="text-4xl font-black text-white mb-2 tracking-wide text-gradient">{userProfile.username}</h1>
                 <p className="text-[var(--color-text-secondary)] font-semibold mb-4">{userProfile.email}</p>
                 <div className="flex items-center justify-center md:justify-start gap-4">
-                  <button onClick={handleEditToggle} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-bold transition-colors">
+                  <button onClick={handleEditToggle} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-bold transition-colors cursor-pointer">
                     <Edit3 className="w-4 h-4" /> Edit Profile
                   </button>
-                  <button onClick={onLogoutClick} className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-sm font-bold transition-colors">
+                  <button onClick={onLogoutClick} className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-sm font-bold transition-colors cursor-pointer">
                     <LogOut className="w-4 h-4" /> Logout
                   </button>
                 </div>
@@ -193,19 +315,19 @@ const Profile = () => {
       <div className="flex flex-wrap gap-4 mb-8 border-b border-white/10 pb-2">
         <button 
           onClick={() => setActiveTab('watchlater')}
-          className={`pb-2 px-4 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'watchlater' ? 'text-[var(--color-electric-cyan)] border-[var(--color-electric-cyan)]' : 'text-gray-500 border-transparent hover:text-white'}`}
+          className={`pb-2 px-4 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 cursor-pointer ${activeTab === 'watchlater' ? 'text-[var(--color-electric-cyan)] border-[var(--color-electric-cyan)]' : 'text-gray-500 border-transparent hover:text-white'}`}
         >
           <Clock className="w-4 h-4" /> Watch Later
         </button>
         <button 
           onClick={() => setActiveTab('watched')}
-          className={`pb-2 px-4 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'watched' ? 'text-[var(--color-electric-cyan)] border-[var(--color-electric-cyan)]' : 'text-gray-500 border-transparent hover:text-white'}`}
+          className={`pb-2 px-4 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 cursor-pointer ${activeTab === 'watched' ? 'text-[var(--color-electric-cyan)] border-[var(--color-electric-cyan)]' : 'text-gray-500 border-transparent hover:text-white'}`}
         >
           <Library className="w-4 h-4" /> Watched List
         </button>
         <button 
           onClick={() => setActiveTab('reviews')}
-          className={`pb-2 px-4 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'reviews' ? 'text-[var(--color-neon-pink)] border-[var(--color-neon-pink)]' : 'text-gray-500 border-transparent hover:text-white'}`}
+          className={`pb-2 px-4 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 flex items-center gap-2 cursor-pointer ${activeTab === 'reviews' ? 'text-[var(--color-neon-pink)] border-[var(--color-neon-pink)]' : 'text-gray-500 border-transparent hover:text-white'}`}
         >
           <MessageSquare className="w-4 h-4" /> My Reviews
         </button>

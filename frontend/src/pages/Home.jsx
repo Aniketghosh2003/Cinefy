@@ -122,7 +122,7 @@ const Home = () => {
     <div className="flex flex-col lg:flex-row gap-8 pb-10">
       
       {/* Left Main Column */}
-      <div className="flex-1 min-w-0 -mt-12">
+      <div className="flex-1 min-w-0 mt-0 sm:-mt-6">
         {/* Trending Grid */}
         <ContentGridSection title="Trending" icon={Megaphone} data={data.trending} />
 
