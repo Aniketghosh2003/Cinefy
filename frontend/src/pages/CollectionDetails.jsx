@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useOutletContext, useNavigate } from 'react-router-dom';
 import { Library, User as UserIcon, Heart, ArrowLeft, Play, Star, Plus } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 const CollectionDetails = () => {
   const { id } = useParams();

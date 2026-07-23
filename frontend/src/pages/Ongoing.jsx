@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Calendar, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 const OngoingLoader = () => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-xl">

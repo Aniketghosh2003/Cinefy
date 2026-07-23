@@ -7,8 +7,23 @@ const { initRedis } = require("./redisClient");
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Middleware - Production CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.CLIENT_URL
+].filter(Boolean);
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 const contentRoutes = require("./routes/contentRoutes");

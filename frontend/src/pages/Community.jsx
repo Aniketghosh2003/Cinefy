@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { Library, Plus, Bookmark, Clock, Users, X } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 const Community = () => {
   const { token, triggerLogin } = useOutletContext();

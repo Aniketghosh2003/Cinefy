@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sparkles, Play, SlidersHorizontal, Search, Tag, MessageSquare, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 const POPULAR_GENRES = ['Action', 'Sci-Fi', 'Thriller', 'Comedy', 'Drama', 'Horror', 'Romance', 'Fantasy', 'Animation', 'Mystery'];
 const POPULAR_MOODS = ['Mind-Blowing', 'Dark', 'Wholesome', 'Fast-Paced', 'Emotional', 'Epic', 'Cyberpunk', 'Suspenseful'];

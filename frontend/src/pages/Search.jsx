@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search as SearchIcon, Play, AlertCircle, Film } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 const Search = () => {
   const [query, setQuery] = useState('');

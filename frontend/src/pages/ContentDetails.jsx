@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useParams, Link, useOutletContext } from 'react-router-dom';
 import { Play, CheckCircle, Bookmark, Plus, Star, Tv, MessageSquare, X, Pause, Library } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 const getYoutubeId = (url) => {
   if (!url) return null;

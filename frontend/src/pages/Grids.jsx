@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { Grid as GridIcon, Plus, Heart, X, Search, Trash2 } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 const Grids = () => {
   const { token, triggerLogin, showToast } = useOutletContext();

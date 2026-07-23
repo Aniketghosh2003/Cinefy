@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Tag, Sparkles, Play, Star, ArrowLeft, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 const GENRES = [
   { name: 'Action', color: 'from-red-500 to-orange-500', emoji: '⚔️' },

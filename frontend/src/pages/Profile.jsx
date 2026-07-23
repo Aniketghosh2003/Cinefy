@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, Link, useNavigate } from 'react-router-dom';
 import { User as UserIcon, Edit3, MessageSquare, Grid, Library, Clock, LogOut, Heart, Camera, Loader2 } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 const Profile = () => {
   const { token, handleLogout, showToast } = useOutletContext();

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Megaphone, Flame, Play, Star, CalendarDays, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api';
+import API_URL from '../api';
 
 // Reusable Grid Component
 const ContentGridSection = ({ title, icon: Icon, data, limit = 10 }) => (
