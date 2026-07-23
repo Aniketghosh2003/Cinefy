@@ -25,6 +25,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/grids", gridRoutes);
 app.use("/api/collections", collectionRoutes);
+app.use("/api/collection", collectionRoutes);
 app.use("/api/person", personRoutes);
 
 // Connect to MongoDB

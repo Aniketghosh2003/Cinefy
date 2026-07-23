@@ -147,8 +147,8 @@ const Community = () => {
       ) : activeTab === 'watchlater' ? (
         watchLaterItems.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-            {watchLaterItems.map(item => (
-              <Link to={`/details/${item.source}/${item.externalId}`} key={item._id} className="group flex flex-col gap-2">
+            {watchLaterItems.map((item, idx) => (
+              <Link to={`/details/${item.source}/${item.externalId}`} key={`${item._id || item.externalId}-${idx}`} className="group flex flex-col gap-2">
                 <div className="aspect-[2/3] rounded-xl overflow-hidden border border-white/10 group-hover:border-[var(--color-electric-cyan)] transition-colors bg-gray-800">
                   {item.poster ? <img src={item.poster} className="w-full h-full object-cover" alt={item.title} /> : <div className="w-full h-full bg-gray-700"></div>}
                 </div>
@@ -164,10 +164,14 @@ const Community = () => {
       ) : collections.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {collections.map((col) => (
-            <div key={col._id} className="glass-panel p-5 rounded-2xl group hover:border-[var(--color-anime-purple)]/55 transition-colors cursor-pointer">
+            <Link 
+              key={col._id} 
+              to={`/collection/${col._id}`}
+              className="glass-panel p-5 rounded-2xl group hover:border-[var(--color-anime-purple)]/55 transition-all hover:scale-[1.02] cursor-pointer block"
+            >
               <div className="flex justify-between items-start mb-3">
                 <h3 className="text-lg font-black text-white group-hover:text-[var(--color-anime-purple)] transition-colors line-clamp-1">{col.title}</h3>
-                <span className="bg-white/10 px-2 py-0.5 rounded text-xs font-bold text-[var(--color-text-secondary)] flex items-center gap-1">
+                <span className="bg-white/10 px-2 py-0.5 rounded text-xs font-bold text-[var(--color-text-secondary)] flex items-center gap-1 shrink-0">
                   <Library className="w-3 h-3" /> {col.items?.length || 0}
                 </span>
               </div>
@@ -180,7 +184,7 @@ const Community = () => {
                    ♥ {col.likesCount || 0}
                 </span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       ) : (

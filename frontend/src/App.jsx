@@ -11,6 +11,7 @@ import Community from './pages/Community';
 import ContentDetails from './pages/ContentDetails';
 import PersonDetails from './pages/PersonDetails';
 import Profile from './pages/Profile';
+import CollectionDetails from './pages/CollectionDetails';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="genres" element={<Genres />} />
           <Route path="grids" element={<Grids />} />
           <Route path="community" element={<Community />} />
+          <Route path="collection/:id" element={<CollectionDetails />} />
           <Route path="details/:source/:id" element={<ContentDetails />} />
           <Route path="person/:source/:id" element={<PersonDetails />} />
           <Route path="profile" element={<Profile />} />

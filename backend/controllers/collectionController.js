@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Collection = require("../models/Collection");
 const Like = require("../models/Like");
 
@@ -43,6 +44,29 @@ exports.getMyCollections = async (req, res) => {
 
     res.status(200).json(collections);
   } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// Get Collection By ID
+exports.getCollectionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: "Invalid collection ID" });
+    }
+
+    const collection = await Collection.findById(id)
+      .populate("userId", "username profilePic")
+      .populate("items");
+
+    if (!collection) {
+      return res.status(404).json({ message: "Collection not found" });
+    }
+
+    res.status(200).json(collection);
+  } catch (error) {
+    console.error("getCollectionById error:", error.message);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };

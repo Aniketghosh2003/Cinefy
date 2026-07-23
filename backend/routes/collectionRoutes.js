@@ -8,6 +8,7 @@ router.get("/", collectionController.getAllCollections);
 router.get("/all", collectionController.getAllCollections);
 router.get("/mine", protect, collectionController.getMyCollections);
 router.post("/add-item", protect, collectionController.addItemToCollection);
+router.get("/:id", collectionController.getCollectionById);
 router.post("/:id/like", protect, collectionController.toggleLike);
 
 module.exports = router;

@@ -216,8 +216,8 @@ const Profile = () => {
         {activeTab === 'watchlater' && (
           (userProfile.watchLater || []).length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-              {userProfile.watchLater.map(item => (
-                <Link to={`/details/${item.source}/${item.externalId}`} key={item._id} className="group flex flex-col gap-2">
+              {userProfile.watchLater.map((item, idx) => (
+                <Link to={`/details/${item.source}/${item.externalId}`} key={`${item._id || item.externalId}-${idx}`} className="group flex flex-col gap-2">
                   <div className="aspect-[2/3] rounded-xl overflow-hidden border border-white/10 group-hover:border-[var(--color-electric-cyan)] transition-colors bg-gray-800">
                     {item.poster ? <img src={item.poster} className="w-full h-full object-cover" alt={item.title} /> : <div className="w-full h-full bg-gray-700"></div>}
                   </div>
@@ -237,8 +237,8 @@ const Profile = () => {
         {activeTab === 'watched' && (
           (userProfile.watched || []).length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-              {userProfile.watched.map(item => (
-                <Link to={`/details/${item.source}/${item.externalId}`} key={item._id} className="group flex flex-col gap-2">
+              {userProfile.watched.map((item, idx) => (
+                <Link to={`/details/${item.source}/${item.externalId}`} key={`${item._id || item.externalId}-${idx}`} className="group flex flex-col gap-2">
                   <div className="aspect-[2/3] rounded-xl overflow-hidden border border-white/10 group-hover:border-[var(--color-electric-cyan)] transition-colors bg-gray-800">
                     {item.poster ? <img src={item.poster} className="w-full h-full object-cover" alt={item.title} /> : <div className="w-full h-full bg-gray-700"></div>}
                   </div>
