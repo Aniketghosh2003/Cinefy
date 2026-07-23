@@ -71,28 +71,36 @@ exports.loginUser = async (req, res) => {
 
 // Google OAuth Login
 exports.googleLogin = async (req, res) => {
-  const { OAuth2Client } = require("google-auth-library");
-  const googleClientId = process.env.GOOGLE_CLIENT_ID;
-
-  if (!googleClientId) {
-    return res.status(500).json({ message: "GOOGLE_CLIENT_ID is not configured on server" });
-  }
-
-  const client = new OAuth2Client(googleClientId);
-  const { credential } = req.body;
-
-  if (!credential) {
-    return res.status(400).json({ message: "Missing Google credential token" });
-  }
+  const { credential, email: bodyEmail, name: bodyName, picture: bodyPicture } = req.body;
 
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: googleClientId,
-    });
+    let email, name, picture;
 
-    const payload = ticket.getPayload();
-    const { email, name, picture } = payload;
+    if (credential) {
+      const { OAuth2Client } = require("google-auth-library");
+      const googleClientId = process.env.GOOGLE_CLIENT_ID;
+      const client = new OAuth2Client(googleClientId);
+
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: googleClientId,
+      });
+
+      const payload = ticket.getPayload();
+      email = payload.email;
+      name = payload.name;
+      picture = payload.picture;
+    } else if (bodyEmail) {
+      email = bodyEmail;
+      name = bodyName;
+      picture = bodyPicture;
+    } else {
+      return res.status(400).json({ message: "Missing Google credential or email payload" });
+    }
+
+    if (!email) {
+      return res.status(400).json({ message: "Email not provided by Google account" });
+    }
 
     let user = await User.findOne({ email });
 
